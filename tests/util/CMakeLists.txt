@@ -5,6 +5,8 @@ include_directories(
 	${piglit_SOURCE_DIR}/tests/util
 )
 
+link_libraries(m)
+
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	link_libraries(${X11_X11_LIB})
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
