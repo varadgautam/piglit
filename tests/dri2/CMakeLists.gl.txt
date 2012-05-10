@@ -19,5 +19,6 @@ link_libraries(
 )
 
 piglit_add_executable(dri2-getparam dri2-getparam.c dri2-util.c)
+piglit_add_executable(dri2-getparam-intel dri2-getparam-intel.c dri2-util.c)
 
 # vim: ft=cmake:
