@@ -16,6 +16,10 @@ add_subdirectory (shaders)
 add_subdirectory (texturing)
 add_subdirectory (spec)
 
+if(BUILD_DRI2_TESTS)
+    add_subdirectory (dri2)
+endif(BUILD_DRI2_TESTS)
+
 if (TIFF_FOUND)
 	add_subdirectory (glean)
 endif (TIFF_FOUND)

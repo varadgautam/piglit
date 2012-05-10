@@ -23,6 +23,13 @@ IF(BUILD_GLX_TESTS)
 	pkg_check_modules(GLPROTO REQUIRED glproto)
 ENDIF()
 
+option(BUILD_DRI2_TESTS "Build tests for DRI2 protocol" OFF)
+if(BUILD_DRI2_TESTS)
+    pkg_check_modules(X11_XCB REQUIRED x11-xcb)
+    pkg_check_modules(XCB REQUIRED xcb)
+    pkg_check_modules(XCB_DRI2 REQUIRED xcb-dri2>=1.9)
+endif()
+
 # The 'REQUIRED' above correctly produces an error for
 # OpenGL and PNG, but there's a bug involving FindGLUT.cmake
 # that fails to produce the error as of CMake 2.8.5.
