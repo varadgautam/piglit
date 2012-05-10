@@ -1,0 +1,23 @@
+include_directories(
+    ${OPENGL_INCLUDE_PATH}
+    ${X11_XCB_INCLUDEDIR}
+    ${XCB_INCLUDEDIR}
+    ${XCB_DRI2_INCLUDEDIR}
+)
+
+link_libraries(
+    # System Libraries
+    X11
+    ${XCB_LIBRARIES}
+    ${X11_XCB_LIBRARIES}
+    ${OPENGL_gl_LIBRARY}
+    ${GLUT_glut_LIBRARY}
+    ${XCB_DRI2_LIBRARIES}
+
+    # Piglit Libraries
+    piglitglxutil
+)
+
+piglit_add_executable(dri2-getparam dri2-getparam.c dri2-util.c)
+
+# vim: ft=cmake:

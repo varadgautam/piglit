@@ -1,0 +1,14 @@
+from framework.core import *
+from framework.exectest import *
+
+profile = TestProfile()
+dri2 = Group()
+
+def add_plain_test(args):
+   testname = " ".join(args)
+   dri2[testname] = PlainExecTest(args)
+
+add_plain_test(["dri2-getparam", "bad_drawable"])
+add_plain_test(["dri2-getparam", "param=unknown"])
+
+profile.tests['dri2'] = dri2
