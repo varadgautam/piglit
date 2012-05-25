@@ -110,7 +110,7 @@ piglit_framework_glut_init(int argc, char *argv[])
 	glutKeyboardFunc(piglit_escape_exit_key);
 
 #ifdef USE_OPENGL
-	glewInit();
+	piglit_dispatch_default_init();
 #endif
 }
 

@@ -235,7 +235,7 @@ piglit_framework_fbo_gl_init()
 	GLenum status;
 
 #ifdef USE_OPENGL
-	glewInit();
+	piglit_dispatch_default_init();
 
 	if (piglit_get_gl_version() < 20)
 		return false;
