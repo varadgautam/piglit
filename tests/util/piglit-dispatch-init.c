@@ -33,7 +33,7 @@
 
 #else /* Linux */
 
-#include "glxew.h"
+#include <GL/glx.h>
 
 #endif
 
