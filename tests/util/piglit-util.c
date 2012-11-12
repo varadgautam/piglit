@@ -421,3 +421,89 @@ write_null:
 	va_end(va);
 	return size_written;
 }
+
+enum piglit_platform
+piglit_get_platform(void)
+{
+	const char *env = getenv("PIGLIT_PLATFORM");
+
+#if defined(_WIN32)
+	if (env != NULL) {
+		printf("error: illegal to set env var PIGLIT_PLATFORM "
+		       "on Windows\n");
+		piglit_report_result(PIGLIT_FAIL);
+	}
+
+	return PIGLIT_PLATFORM_WGL;
+
+#elif defined(__APPLE__)
+	if (env != NULL) {
+		printf("error: illegal to set env var PIGLIT_PLATFORM "
+		       "on Apple\n");
+		piglit_report_result(PIGLIT_FAIL);
+	}
+
+	return PIGLIT_PLATFORM_APPLE;
+
+#elif defined(__ANDROID__)
+	if (env != NULL) {
+		printf("error: illegal to set env var PIGLIT_PLATFORM "
+		       "on Android\n");
+		piglit_report_result(PIGLIT_FAIL);
+	}
+
+	return PIGLIT_PLATFORM_ANDROID;
+
+#elif defined(__unix__)
+
+	if (env == NULL) {
+		#ifdef PIGLIT_HAS_GLX
+			/* GLX is the default on Linux. */
+			return PIGLIT_PLATFORM_GLX;
+		#else
+			printf("error: environment var PIGLIT_PLATFORM must be set "
+				"when piglit is built without GLX support\n");
+			piglit_report_result(PIGLIT_FAIL);
+		#endif
+	} else if (strcmp(env, "gbm") == 0) {
+		#ifdef PIGLIT_HAS_GBM
+			return PIGLIT_PLATFORM_GBM;
+		#else
+			goto error_built_without_support;
+		#endif
+	} else if (strcmp(env, "glx") == 0) {
+		#ifdef PIGLIT_HAS_GLX
+			return PIGLIT_PLATFORM_GLX;
+		#else
+			goto error_built_without_support;
+		#endif
+	} else if (strcmp(env, "x11_egl") == 0 ||
+		   strcmp(env, "xegl") == 0) {
+		#if defined(PIGLIT_HAS_X11) && defined(PIGLIT_HAS_EGL)
+			return PIGLIT_PLATFORM_XEGL;
+		#else
+			goto error_built_without_support;
+		#endif
+	} else if (strcmp(env, "wayland") == 0) {
+		#ifdef PIGLIT_HAS_WAYLAND
+			return PIGLIT_PLATFORM_WAYLAND;
+		#else
+			goto error_built_without_support;
+		#endif
+	} else {
+		printf("error: env var PIGLIT_PLATFORM has bad "
+		       "value: \"%s\"\n", env);
+		piglit_report_result(PIGLIT_FAIL);
+		return 0;
+	}
+
+error_built_without_support:
+	printf("error: env var PIGLIT_PLATFORM=\"%s\", but piglit was built "
+	       "without support for that platform\n", env);
+	piglit_report_result(PIGLIT_FAIL);
+	return 0;
+
+#else
+#error "unable to detect operating system"
+#endif
+}
