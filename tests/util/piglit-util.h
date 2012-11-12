@@ -165,6 +165,28 @@ piglit_source_dir(void);
 size_t
 piglit_join_paths(char buf[], size_t buf_size, int n, ...);
 
+enum piglit_platform {
+	PIGLIT_PLATFORM_WGL = 1,
+	PIGLIT_PLATFORM_APPLE,
+
+	/* Linux platforms, whose names map directly Waffle platforms. */
+	PIGLIT_PLATFORM_ANDROID,
+	PIGLIT_PLATFORM_GLX,
+	PIGLIT_PLATFORM_XEGL,
+	PIGLIT_PLATFORM_WAYLAND,
+	PIGLIT_PLATFORM_GBM,
+};
+
+/**
+ * @brief Detect platform, such as GLX or XEGL, at runtime.
+ *
+ * If set, translate the environment variable PIGLIT_PLATFORM to
+ * enum piglit_platform. Otherwise, return a default value appropriate
+ * for the operating system.
+ */
+enum piglit_platform
+piglit_get_platform(void);
+
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif
