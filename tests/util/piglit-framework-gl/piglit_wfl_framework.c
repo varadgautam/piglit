@@ -44,66 +44,26 @@ piglit_wfl_framework(struct piglit_gl_framework *gl_fw)
 int32_t
 piglit_wfl_framework_choose_platform(void)
 {
-	const char *env = getenv("PIGLIT_PLATFORM");
-
-	if (env == NULL) {
-#ifdef PIGLIT_HAS_GLX
+	switch (piglit_get_platform()) {
+	case PIGLIT_PLATFORM_WGL:
+	case PIGLIT_PLATFORM_APPLE:
+		/* Piglit's Waffle layer does not yet support the platform. */
+		assert(0);
+		return 0;
+	case PIGLIT_PLATFORM_ANDROID:
+		return WAFFLE_PLATFORM_ANDROID;
+	case PIGLIT_PLATFORM_GLX:
 		return WAFFLE_PLATFORM_GLX;
-#else
-		fprintf(stderr, "environment var PIGLIT_PLATFORM must be set "
-		        "when piglit is built without GLX support\n");
-		piglit_report_result(PIGLIT_FAIL);
-#endif
-	}
-
-	else if (strcmp(env, "gbm") == 0) {
-#ifdef PIGLIT_HAS_GBM
-		return WAFFLE_PLATFORM_GBM;
-#else
-		fprintf(stderr, "environment var PIGLIT_PLATFORM=gbm, but "
-		        "piglit was built without GBM support\n");
-		piglit_report_result(PIGLIT_FAIL);
-#endif
-	}
-
-	else if (strcmp(env, "glx") == 0) {
-#ifdef PIGLIT_HAS_GLX
-		return WAFFLE_PLATFORM_GLX;
-#else
-		fprintf(stderr, "environment var PIGLIT_PLATFORM=glx, but "
-		        "piglit was built without GLX support\n");
-		piglit_report_result(PIGLIT_FAIL);
-#endif
-	}
-
-	else if (strcmp(env, "x11_egl") == 0) {
-#if defined(PIGLIT_HAS_X11) && defined(PIGLIT_HAS_EGL)
+	case PIGLIT_PLATFORM_XEGL:
 		return WAFFLE_PLATFORM_X11_EGL;
-#else
-		fprintf(stderr, "environment var PIGLIT_PLATFORM=x11_egl, "
-		        "but piglit was built without X11/EGL support\n");
-		piglit_report_result(PIGLIT_FAIL);
-#endif
-	}
-
-	else if (strcmp(env, "wayland") == 0) {
-#ifdef PIGLIT_HAS_WAYLAND
+	case PIGLIT_PLATFORM_WAYLAND:
 		return WAFFLE_PLATFORM_WAYLAND;
-#else
-		fprintf(stderr, "environment var PIGLIT_PLATFORM=wayland, "
-		        "but piglit was built without Wayland support\n");
-		piglit_report_result(PIGLIT_FAIL);
-#endif
+	case PIGLIT_PLATFORM_GBM:
+		return WAFFLE_PLATFORM_GBM;
+	default:
+		assert(0);
+		return 0;
 	}
-
-	else {
-		fprintf(stderr, "environment var PIGLIT_PLATFORM has bad "
-			"value \"%s\"\n", env);
-		piglit_report_result(PIGLIT_FAIL);
-	}
-
-	assert(false);
-	return 0;
 }
 
 /**
