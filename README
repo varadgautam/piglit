@@ -189,6 +189,25 @@ Build from the Visual Studio Command Prompt.
   > nmake
 
 
+2.6 Android
+----------
+
+Using the Android Tree.
+  $ cd <android_source_tree>
+  $ . build/envsetup.sh
+  $ lunch <choose_your_platform>
+  $ cd external/piglit
+  $ cmake \
+    -DCMAKE_TOOLCHAIN_FILE=cmake/Modules/Compiler/Android.cmake \
+    -DPIGLIT_USE_WAFFLE=ON \
+    -DPIGLIT_BUILD_GL_TESTS=OFF \
+    -DPIGLIT_BUILD_GLX_TESTS=OFF \
+    -DPIGLIT_BUILD_GLES1_TESTS=ON \
+    -DPIGLIT_BUILD_GLES2_TESTS=ON \
+  .
+  $ make
+
+
 3. How to run tests
 -------------------
 
