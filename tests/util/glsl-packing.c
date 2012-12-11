@@ -30,10 +30,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* TODO: Reject round options for pack/unpackHalf.
- * TODO: Discuss choices in packHalf.
- */
-
 #define PRIf32_PRECISION "24"
 #define PRIf32 "%." PRIf32_PRECISION "f"
 
@@ -82,7 +78,7 @@ static const char *help_text =
 	"FUNC_OPTS\n"
 	"    flush_float16\n"
 	"    flush_float32\n"
-	"        All PACK_FUNC and UNPACK_FUNC commands accept the flush options.\n"
+	"        All PACK_FUNC and UNPACK_FUNC commands accept a flush mode.\n"
 	"\n"
 	"        The GLSL ES 3.00 and GLSL 4.10 specs allows implementations to truncate\n"
 	"        subnormal floats to zero. From section 4.5.1 \"Range and Precision\"\n"
@@ -99,8 +95,8 @@ static const char *help_text =
 	"\n"
 	"    round_to_nearest\n"
 	"    round_to_even\n"
-	"        All PACK_FUNC and UNPACK_FUNC commands except pack/unpackHalf2x16 accept\n"
-	"        the rounding option. At most one rounding option may be specified.\n"
+	"        Only packSnorm and packUnorm commands accept a rounding mode. At most one\n"
+	"        most one rounding mode may be specified.\n"
 	"\n"
 	"        For some packing functions, the GLSL ES 3.00 specification's\n"
 	"        definition of the function's behavior involves the `round()`\n"
@@ -591,10 +587,10 @@ parse_func_opts(struct func_options *func_opts,
 		usage_error("unrecognized option: %s", arg);
 	}
 
-	if (func_opts->round != NULL
-	    && (strncmp(command_name, "packHalf", 8) == 0 ||
-	        strncmp(command_name, "unpackHalf", 10) == 0)) {
-	   usage_error("Half functions do not accept any rounding options");
+	if (func_opts->round != NULL &&
+	    strncmp(command_name, "packSnorm", 9) != 0 &&
+	    strncmp(command_name, "packUnorm", 9) != 0) {
+	   usage_error("only packSnorm and packUnom accept a rounding mode");
 	}
 
 	if (!func_opts->round ) {
