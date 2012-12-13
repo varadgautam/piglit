@@ -6,8 +6,11 @@ piglit_add_library (piglitutil
 	${UTIL_SOURCES}
 )
 
+piglit_add_executable(glsl-packing glsl-packing.c)
+
 if(UNIX)
 	target_link_libraries(piglitutil m)
+	target_link_libraries(glsl-packing m)
 endif(UNIX)
 
 # vim: ft=cmake:
