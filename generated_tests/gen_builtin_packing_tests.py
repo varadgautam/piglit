@@ -486,7 +486,9 @@ class PackUnpackFunc(object):
 
     @property
     def num_possible_outputs(self):
-        return len(self.inouts[0])
+        #print(self.inouts)
+        #print(len(self.inouts[0].possible_outputs))
+        return len(self.inouts[0].possible_outputs)
 
 class Pack2x16Func(PackUnpackFunc):
 
@@ -510,11 +512,10 @@ class Pack2x16Func(PackUnpackFunc):
 
         self.__inouts = []
 
-        for y in self.float_inputs:
-            yl = glsl_literal(y)
-
-            for x in self.float_inputs:
+        for x in self.float_inputs:
                 xl = glsl_literal(x)
+                y = 0.0
+                yl = glsl_literal(y)
                 input = (xl, yl)
 
                 possible_outputs = []
@@ -696,9 +697,7 @@ class PackHalf2x16Func(Pack2x16Func):
 
     @property
     def func_opts_seq(self):
-        return ((),
-                ("flush_float16",),
-                ("flush_float32",))
+        return ((),)
 
     @property
     def float_inputs(self):
@@ -736,34 +735,18 @@ class PackHalf2x16Func(Pack2x16Func):
         max_step = info["max_step"]
 
         pos_floats = (
-            # for x = 0;
-            #     x <= normal_min + min_step
-            #     x +=  min_step
-            0.0,
-            subnormal_min,
-            subnormal_min + 1.0 * min_step,
-
-            # for x = subnormal_max - min_step
-            #     x <= normal_min + min_step
-            #     x += min_step
-            subnormal_max - 1.0 * min_step,
-            subnormal_max,
-            normal_min,
-            normal_min + 1.0 * min_step,
-
-            # for x = normal_max - max_step
-            #     x <= normal_max + max_step
-            #     x += max_step
-            normal_max - 1.0 * max_step,
-            normal_max,
-            normal_max + 1.0 * max_step,
-
-            float("inf"),
+            normal_min + 0.00 * min_step,
+            normal_min + 0.25 * min_step,
+            normal_min + 0.50 * min_step,
+            normal_min + 0.75 * min_step,
+            normal_min + 1.00 * min_step,
+            normal_min + 1.25 * min_step,
+            normal_min + 1.50 * min_step,
+            normal_min + 1.75 * min_step,
+            normal_min + 2.00 * min_step,
             )
-        neg_floats = tuple(reversed(tuple((-x for x in pos_floats))))
-        all_floats = neg_floats + pos_floats
 
-        self.__float_inputs = all_floats
+        self.__float_inputs = pos_floats
         return self.__float_inputs
 
 class UnpackHalf2x16Func(Unpack2x16Func):
@@ -850,16 +833,10 @@ def all_tests_iter():
     # easily debug by commenting out individual items.
 
     func_classes = (
-        PackSnorm2x16Func,
-        PackUnorm2x16Func,
         PackHalf2x16Func,
-        UnpackSnorm2x16Func,
-        UnpackUnorm2x16Func,
-        UnpackHalf2x16Func,
         )
 
     execution_stages = (
-        "const",
         "vs",
         "fs",
         )
