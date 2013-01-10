@@ -1,0 +1,90 @@
+[require]
+GL >= 3.0 es
+GLSL >= 3.00 es
+
+[vertex shader]
+const vec4 red = vec4(1, 0, 0, 1);
+const vec4 green = vec4(0, 1, 0, 1);
+
+uniform vec2 func_input;
+
+uniform highp uint expect0;
+
+in vec4 vertex;
+out vec4 vert_color;
+
+void main()
+{
+    gl_Position = vertex;
+    highp uint actual = packHalf2x16(func_input);
+
+    if (false
+        || actual == expect0
+       ) {
+       vert_color = green;
+    } else {
+        vert_color = red;
+    }
+}
+
+[fragment shader]
+in vec4 vert_color;
+out vec4 frag_color;
+
+void main()
+{
+    frag_color = vert_color;
+}
+
+[vertex data]
+vertex/float/2
+-1.0 -1.0
+ 1.0 -1.0
+ 1.0  1.0
+-1.0  1.0
+
+[test]
+uniform vec2 func_input 6.103515625e-05 0.0
+uniform uint expect0 1024u
+draw arrays GL_TRIANGLE_FAN 0 4
+probe all rgba 0.0 1.0 0.0 1.0
+
+uniform vec2 func_input 6.105005741119385e-05 0.0
+uniform uint expect0 1024u
+draw arrays GL_TRIANGLE_FAN 0 4
+probe all rgba 0.0 1.0 0.0 1.0
+
+uniform vec2 func_input 6.10649585723877e-05 0.0
+uniform uint expect0 1024u
+draw arrays GL_TRIANGLE_FAN 0 4
+probe all rgba 0.0 1.0 0.0 1.0
+
+uniform vec2 func_input 6.107985973358154e-05 0.0
+uniform uint expect0 1024u
+draw arrays GL_TRIANGLE_FAN 0 4
+probe all rgba 0.0 1.0 0.0 1.0
+
+uniform vec2 func_input 6.109476089477539e-05 0.0
+uniform uint expect0 1025u
+draw arrays GL_TRIANGLE_FAN 0 4
+probe all rgba 0.0 1.0 0.0 1.0
+
+uniform vec2 func_input 6.110966205596924e-05 0.0
+uniform uint expect0 1025u
+draw arrays GL_TRIANGLE_FAN 0 4
+probe all rgba 0.0 1.0 0.0 1.0
+
+uniform vec2 func_input 6.112456321716309e-05 0.0
+uniform uint expect0 1025u
+draw arrays GL_TRIANGLE_FAN 0 4
+probe all rgba 0.0 1.0 0.0 1.0
+
+uniform vec2 func_input 6.113946437835693e-05 0.0
+uniform uint expect0 1025u
+draw arrays GL_TRIANGLE_FAN 0 4
+probe all rgba 0.0 1.0 0.0 1.0
+
+uniform vec2 func_input 6.115436553955078e-05 0.0
+uniform uint expect0 1026u
+draw arrays GL_TRIANGLE_FAN 0 4
+probe all rgba 0.0 1.0 0.0 1.0
