@@ -190,15 +190,33 @@ const char* piglit_get_gl_error_name(GLenum error)
 #undef CASE
 }
 
-GLboolean
-piglit_check_gl_error_(GLenum expected_error, const char *file, unsigned line)
+bool
+piglit_check_gl_error_list_(int n, const char *file, unsigned line, ...)
 {
-	GLenum actual_error;
+	bool pass = false;
+	GLenum actual_error = glGetError();
+	va_list va;
+	int i;
 
-	actual_error = glGetError();
-	if (actual_error == expected_error) {
-		return GL_TRUE;
+	if (n < 1)
+	   return true;
+
+	va_start(va, line);
+
+	for (i = 0; i < n; ++i) {
+		GLenum expected_error = va_arg(va, GLenum);
+		if (actual_error == expected_error) {
+			pass = true;
+			break;
+		}
 	}
+
+	va_end(va);
+
+	if (pass)
+	   return true;
+
+        va_start(va, line);
 
 	/*
 	 * If the lookup of the error's name is successful, then print
@@ -210,13 +228,41 @@ piglit_check_gl_error_(GLenum expected_error, const char *file, unsigned line)
                piglit_get_gl_error_name(actual_error), actual_error);
         printf("(Error at %s:%u)\n", file, line);
 
-	/* Print the expected error, but only if an error was really expected. */
-	if (expected_error != GL_NO_ERROR) {
-		printf("Expected GL error: %s 0x%x\n",
-		piglit_get_gl_error_name(expected_error), expected_error);
+        if (n == 1) {
+           GLenum expected_error = va_arg(va, GLenum);
+
+           /* Print the expected error, but only if an error was really expected. */
+           if (expected_error != GL_NO_ERROR) {
+                   printf("Expected GL error: %s 0x%x\n",
+                   piglit_get_gl_error_name(expected_error), expected_error);
+           }
+        } else {
+           /* Print all expected errors. */
+           assert(n > 1);
+           printf("Expected one of the following GL errors: ");
+
+
+           for (i = 0; i < n; ++i) {
+			GLenum expected_error = va_arg(va, GLenum);
+			printf("%s(0x%x)",
+			       piglit_get_gl_error_name(expected_error),
+			       expected_error);
+
+			if (i == n - 1)
+				printf("\n");
+			else
+				printf(" ");
+		}
         }
 
-	return GL_FALSE;
+        va_end(va);
+	return false;
+}
+
+GLboolean
+piglit_check_gl_error_(GLenum expected_error, const char *file, unsigned line)
+{
+   return piglit_check_gl_error_list_(1, file, line, expected_error);
 }
 
 void piglit_reset_gl_error(void)

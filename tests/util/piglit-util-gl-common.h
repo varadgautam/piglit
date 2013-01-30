@@ -88,8 +88,24 @@ const char *piglit_get_gl_enum_name(GLenum param);
 GLboolean
 piglit_check_gl_error_(GLenum expected_error, const char *file, unsigned line);
 
+/**
+ * \brief Check for unexpected GL errors.
+ *
+ * The variable argument list consists of \a n GL error codes. If
+ * glGetError() returns an error that does belong to the given list,
+ * then print a diagnositc and return false. Otherwise, return true.
+ *
+ * If \a n is less than 1, then this function trivially succeeds and returns
+ * true.
+ */
+bool
+piglit_check_gl_error_list_(int n, const char *file, unsigned line, ...);
+
 #define piglit_check_gl_error(expected) \
  piglit_check_gl_error_((expected), __FILE__, __LINE__)
+
+#define piglit_check_gl_error_list(count, ...) \
+   piglit_check_gl_error_list_((count), __FILE__, __LINE__, __VA_ARGS__)
 
 /**
  * \brief Drain all GL errors.
