@@ -24,8 +24,7 @@
 #pragma once
 
 #include <EGL/egl.h>
-
-#include "piglit-util-gl-common.h"
+#include "piglit-util.h"
 
 #ifdef __cplusplus
 extern "C" {
