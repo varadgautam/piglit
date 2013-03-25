@@ -82,7 +82,13 @@
  * - s=d=z32f_s8 means that GL_STENCIL_ATTACHMENT is bound to a buffer
  *   of type GL_DEPTH32F_STENCIL8 and then GL_DEPTH_ATTACHMENT is
  *   bound to the same buffer.
+ *
+ * Environment
+ * -----------
+ * This test respects two environment variables: "levels" and "be_nice".
  */
+
+#include <string.h>
 
 #include "piglit-util-gl-common.h"
 
@@ -559,13 +565,45 @@ piglit_display()
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
 
-	for (int level = 0; level <= max_miplevel; ++level) {
-		set_up_framebuffer_for_miplevel(level);
-		populate_miplevel(level);
+	int levels[1024];
+	const char *levels_env = getenv("levels");
+	const char *be_nice_env = getenv("be_nice");
+
+	if (levels_env) {
+		char *tmp = strdup(levels_env);
+		const char *level = strtok(tmp, ",");
+		int i = 0;
+
+		while (level) {
+			levels[i] = atoi(level);
+			level = strtok(NULL, ",");
+			++i;
+		}
+
+		levels[i] = -1;
+	} else {
+		for (int level = 0; level <= max_miplevel; ++level) {
+			levels[level] = level;
+		}
+
+		levels[max_miplevel] = -1;
 	}
-	for (int level = 0; level <= max_miplevel; ++level) {
-		set_up_framebuffer_for_miplevel(level);
-		pass = test_miplevel(level) && pass;
+
+	if (be_nice_env) {
+		for (int i = 0; levels[i] != -1; ++i) {
+			set_up_framebuffer_for_miplevel(levels[i]);
+			populate_miplevel(levels[i]);
+			pass = test_miplevel(levels[i]) && pass;
+		}
+	} else {
+		for (int i = 0; levels[i] != -1; ++i) {
+			set_up_framebuffer_for_miplevel(levels[i]);
+			populate_miplevel(levels[i]);
+		}
+		for (int i = 0; levels[i] != -1; ++i) {
+			set_up_framebuffer_for_miplevel(levels[i]);
+			pass = test_miplevel(levels[i]) && pass;
+		}
 	}
 
 	if (!piglit_automatic)
