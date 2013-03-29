@@ -104,7 +104,6 @@ PIGLIT_GL_TEST_CONFIG_END
 
 namespace {
 
-GLuint color_tex;
 GLuint depth_tex;
 GLuint stencil_tex;
 bool attach_depth = false;
@@ -189,9 +188,6 @@ create_mipmapped_tex(GLenum internal_format)
 void
 set_up_framebuffer_for_miplevel(int level)
 {
-	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER,
-			       GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-			       color_tex, level);
 	if (attach_together) {
 		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER,
 				       GL_DEPTH_STENCIL_ATTACHMENT,
@@ -537,8 +533,6 @@ extern "C" enum piglit_result
 piglit_display()
 {
 	bool pass = true;
-
-	color_tex = create_mipmapped_tex(GL_RGBA);
 
 	if (attach_depth) {
 		depth_tex = create_mipmapped_tex(depth_format);
