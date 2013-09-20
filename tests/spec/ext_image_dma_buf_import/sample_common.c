@@ -21,11 +21,9 @@
  * IN THE SOFTWARE.
  */
 
-#include "sample_common.h"
-#include "piglit-util-egl.h"
-#define EGL_EGLEXT_PROTOTYPES 1
-#include <EGL/eglext.h>
 #include <unistd.h>
+
+#include "sample_common.h"
 
 static const char fs_src[] =
 	"#extension GL_OES_EGL_image_external : require\n"

@@ -31,9 +31,11 @@
  * checks the availability of the real extension and takes care of the linking.
  */
 
+#include <unistd.h>
+#include <drm_fourcc.h>
+
 #include "piglit-util-egl.h"
-#define EGL_EGLEXT_PROTOTYPES 1
-#include <EGL/eglext.h>
+#include "piglit-util-gl-common.h"
 
 extern PFNEGLCREATEIMAGEKHRPROC image_common_dispatch_eglCreateImageKHR;
 #define eglCreateImageKHR image_common_dispatch_eglCreateImageKHR
