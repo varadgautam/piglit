@@ -238,31 +238,7 @@ piglit_link_check_status_quiet(GLint prog)
 
 GLint piglit_link_simple_program(GLint vs, GLint fs)
 {
-	GLint prog;
-
-	piglit_require_GLSL();
-
-	prog = glCreateProgram();
-	if (vs)
-		glAttachShader(prog, vs);
-	if (fs)
-		glAttachShader(prog, fs);
-
-	/* If the shaders reference piglit_vertex or piglit_tex, bind
-	 * them to some fixed attribute locations so they can be used
-	 * with piglit_draw_rect_tex() in GLES.
-	 */
-	glBindAttribLocation(prog, PIGLIT_ATTRIB_POS, "piglit_vertex");
-	glBindAttribLocation(prog, PIGLIT_ATTRIB_TEX, "piglit_texcoord");
-
-	glLinkProgram(prog);
-
-	if (!piglit_link_check_status(prog)) {
-		glDeleteProgram(prog);
-		prog = 0;
-	}
-
-	return prog;
+	return piglit_link_simple_program_multiple_shaders(vs, fs, 0);
 }
 
 
@@ -274,23 +250,10 @@ GLuint
 piglit_build_simple_program_unlinked(const char *vs_source,
 				     const char *fs_source)
 {
-	GLuint prog;
-
-	piglit_require_GLSL();
-	prog = glCreateProgram();
-	if (vs_source) {
-		GLuint vs = piglit_compile_shader_text(GL_VERTEX_SHADER,
-						       vs_source);
-		glAttachShader(prog, vs);
-		glDeleteShader(vs);
-	}
-	if (fs_source) {
-		GLuint fs = piglit_compile_shader_text(GL_FRAGMENT_SHADER,
-						       fs_source);
-		glAttachShader(prog, fs);
-		glDeleteShader(fs);
-	}
-	return prog;
+	return piglit_build_simple_program_unlinked_multiple_shaders(
+			GL_VERTEX_SHADER, vs_source,
+			GL_FRAGMENT_SHADER, fs_source,
+			0);
 }
 
 
@@ -301,26 +264,10 @@ piglit_build_simple_program_unlinked(const char *vs_source,
 GLint
 piglit_build_simple_program(const char *vs_source, const char *fs_source)
 {
-	GLuint vs = 0, fs = 0, prog;
-
-	if (vs_source) {
-		vs = piglit_compile_shader_text(GL_VERTEX_SHADER, vs_source);
-	}
-
-	if (fs_source) {
-		fs = piglit_compile_shader_text(GL_FRAGMENT_SHADER, fs_source);
-	}
-
-	prog = piglit_link_simple_program(vs, fs);
-	if (!prog)
-		piglit_report_result(PIGLIT_FAIL);
-
-	if (fs)
-		glDeleteShader(fs);
-	if (vs)
-		glDeleteShader(vs);
-
-	return prog;
+	return piglit_build_simple_program_multiple_shaders(
+			GL_VERTEX_SHADER, vs_source,
+			GL_FRAGMENT_SHADER, fs_source,
+			0);
 }
 
 GLint piglit_link_simple_program_multiple_shaders(GLint shader1, ...)
