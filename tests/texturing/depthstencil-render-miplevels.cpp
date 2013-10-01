@@ -104,6 +104,8 @@ namespace {
  */
 enum piglit_result result = PIGLIT_FAIL;
 
+const char *prog_name;
+
 GLuint color_tex;
 GLuint depth_tex;
 GLuint stencil_tex;
@@ -309,8 +311,8 @@ test_miplevel(int level)
 	return pass;
 }
 
-void
-print_usage_and_exit(char *prog_name)
+static void
+print_usage_and_exit(void)
 {
 	printf("Usage: %s <texture_size> <buffer_combination>\n"
 	       "    Available buffer combinations:\n"
@@ -341,8 +343,10 @@ print_usage_and_exit(char *prog_name)
 static void
 parse_args(int argc, char *argv[])
 {
+	prog_name = argv[0];
+
 	if (argc != 3) {
-		print_usage_and_exit(argv[0]);
+		print_usage_and_exit();
 	}
 
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
@@ -353,7 +357,7 @@ parse_args(int argc, char *argv[])
 		char *endptr = NULL;
 		miplevel0_size = strtol(argv[1], &endptr, 0);
 		if (endptr != argv[1] + strlen(argv[1]))
-			print_usage_and_exit(argv[0]);
+			print_usage_and_exit();
 
 		/* Now figure out the appropriate value of max_miplevel for this size. */
 		max_miplevel = 0;
@@ -453,7 +457,7 @@ parse_args(int argc, char *argv[])
 		attach_together = true;
 		depth_format = GL_DEPTH32F_STENCIL8;
 	} else {
-		print_usage_and_exit(argv[0]);
+		print_usage_and_exit();
 	}
 }
 
