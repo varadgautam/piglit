@@ -98,6 +98,12 @@ PIGLIT_GL_TEST_CONFIG_END
 
 namespace {
 
+/**
+ * The final test result. It's global because piglit_init() must pass it
+ * to piglit_display().
+ */
+enum piglit_result result = PIGLIT_FAIL;
+
 GLuint color_tex;
 GLuint depth_tex;
 GLuint stencil_tex;
@@ -332,8 +338,8 @@ print_usage_and_exit(char *prog_name)
 	piglit_report_result(PIGLIT_FAIL);
 }
 
-extern "C" void
-piglit_init(int argc, char **argv)
+static void
+parse_args(int argc, char *argv[])
 {
 	if (argc != 3) {
 		print_usage_and_exit(argv[0]);
@@ -451,6 +457,55 @@ piglit_init(int argc, char **argv)
 	}
 }
 
+extern "C" void
+piglit_init(int argc, char **argv)
+{
+	bool pass = true;
+	GLuint fbo;
+
+	parse_args(argc, argv);
+
+	color_tex = create_mipmapped_tex(GL_RGBA);
+
+	if (attach_depth) {
+		depth_tex = create_mipmapped_tex(depth_format);
+		if (!depth_tex) {
+			/* unsupported format */
+			piglit_report_result(PIGLIT_SKIP);
+		}
+	}
+
+	if (attach_stencil) {
+		if (shared_attachment) {
+			stencil_tex = depth_tex;
+		} else {
+			stencil_tex = create_mipmapped_tex(GL_DEPTH24_STENCIL8);
+		}
+		if (!stencil_tex) {
+			/* unsupported format */
+			piglit_report_result(PIGLIT_SKIP);
+		}
+	}
+
+	glGenFramebuffers(1, &fbo);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
+
+	for (int level = 0; level <= max_miplevel; ++level) {
+		set_up_framebuffer_for_miplevel(level);
+		populate_miplevel(level);
+	}
+
+	for (int level = 0; level <= max_miplevel; ++level) {
+		set_up_framebuffer_for_miplevel(level);
+		pass = test_miplevel(level) && pass;
+	}
+
+	result = pass ? PIGLIT_PASS : PIGLIT_FAIL;
+	if (piglit_automatic)
+		piglit_report_result(result);
+}
+
 static void
 render_tex_to_screen(GLuint tex, int x, int y)
 {
@@ -533,48 +588,10 @@ render_results_to_screen()
 extern "C" enum piglit_result
 piglit_display()
 {
-	bool pass = true;
-
-	color_tex = create_mipmapped_tex(GL_RGBA);
-
-	if (attach_depth) {
-		depth_tex = create_mipmapped_tex(depth_format);
-		if (!depth_tex) {
-			/* unsupported format */
-			piglit_report_result(PIGLIT_SKIP);
-		}
-	}
-
-	if (attach_stencil) {
-		if (shared_attachment) {
-			stencil_tex = depth_tex;
-		} else {
-			stencil_tex = create_mipmapped_tex(GL_DEPTH24_STENCIL8);
-		}
-		if (!stencil_tex) {
-			/* unsupported format */
-			piglit_report_result(PIGLIT_SKIP);
-		}
-	}
-
-	GLuint fbo;
-	glGenFramebuffers(1, &fbo);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
-
-	for (int level = 0; level <= max_miplevel; ++level) {
-		set_up_framebuffer_for_miplevel(level);
-		populate_miplevel(level);
-	}
-	for (int level = 0; level <= max_miplevel; ++level) {
-		set_up_framebuffer_for_miplevel(level);
-		pass = test_miplevel(level) && pass;
-	}
-
 	if (!piglit_automatic)
 		render_results_to_screen();
 
-	return pass ? PIGLIT_PASS : PIGLIT_FAIL;
+	return result;
 }
 
 }; /* Anonymous namespace */
