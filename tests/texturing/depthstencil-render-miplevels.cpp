@@ -178,6 +178,13 @@ struct texture {
 	struct texture_level *levels;
 };
 
+#define texture_foreach_layer(tex, level, layer) \
+	\
+	for (level = 0, layer = 0; \
+	     level < tex->num_levels; \
+	     (++layer == tex->levels[level].num_layers) \
+		&& ((layer = 0), ++level))
+
 /**
  * The final test result. It's global because piglit_init() must pass it
  * to piglit_display().
@@ -186,9 +193,10 @@ enum piglit_result result = PIGLIT_FAIL;
 
 const char *prog_name;
 
-GLuint color_tex;
-GLuint depth_tex;
-GLuint stencil_tex;
+const struct texture *color_tex;
+const struct texture *depth_tex;
+const struct texture *stencil_tex;
+
 bool attach_depth = false;
 bool attach_stencil = false;
 bool shared_attachment = false;
@@ -196,9 +204,6 @@ bool attach_together = false;
 bool attach_stencil_first = false;
 GLenum depth_format;
 int miplevel0_size;
-int max_miplevel;
-float **depth_miplevel_data;
-uint8_t **stencil_miplevel_data;
 
 static int
 minify(int n, int levels)
@@ -228,51 +233,6 @@ check_internal_format(GLenum internal_format)
 	default:
 		break;
 	}
-}
-
-
-/**
- * Create a mipmapped texture with the given dimensions and internal format.
- */
-GLuint
-create_mipmapped_tex(GLenum internal_format)
-{
-	GLenum format;
-
-	check_internal_format(internal_format);
-
-	switch (internal_format) {
-	case GL_RGBA:
-		format = GL_RGBA;
-		break;
-	case GL_DEPTH_COMPONENT16:
-	case GL_DEPTH_COMPONENT24:
-	case GL_DEPTH_COMPONENT32F:
-		format = GL_DEPTH_COMPONENT;
-		break;
-	case GL_DEPTH24_STENCIL8:
-	case GL_DEPTH32F_STENCIL8:
-		format = GL_DEPTH_STENCIL;
-		break;
-	default:
-		printf("Unexpected internal_format in create_mipmapped_tex\n");
-		piglit_report_result(PIGLIT_FAIL);
-	}
-	GLenum type = format == GL_DEPTH_STENCIL
-		? GL_UNSIGNED_INT_24_8 : GL_UNSIGNED_BYTE;
-	GLuint tex;
-	glGenTextures(1, &tex);
-	glBindTexture(GL_TEXTURE_2D, tex);
-	for (int level = 0; level <= max_miplevel; ++level) {
-		int dim = miplevel0_size >> level;
-		glTexImage2D(GL_TEXTURE_2D, level, internal_format,
-			     dim, dim,
-			     0,
-			     format, type, NULL);
-		if (!piglit_check_gl_error(GL_NO_ERROR))
-			piglit_report_result(PIGLIT_FAIL);
-	}
-	return tex;
 }
 
 static void
@@ -423,80 +383,93 @@ texture_get_layer(const struct texture *tex, int level, int layer)
 	return &tex->levels[level].layers[layer];
 }
 
-/**
- * Attach the proper miplevel of each texture to the framebuffer
- */
-void
-set_up_framebuffer_for_miplevel(int level)
+static void
+texture_attach_layer_to_framebuffer(const struct texture *tex,
+				   int level, int layer,
+				   GLenum attachment)
 {
-	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER,
-			       GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-			       color_tex, level);
+	/* Currently, the test supports only GL_TEXTURE_2D. */
+	assert(tex->target == GL_TEXTURE_2D);
+	texture_check_layer(tex, level, layer);
+
+	glFramebufferTexture2D(GL_FRAMEBUFFER,
+			       attachment, GL_TEXTURE_2D,
+			       tex->name, level);
+
+	if (!piglit_check_gl_error(GL_NO_ERROR))
+		piglit_report_result(PIGLIT_FAIL);
+}
+
+/**
+ * Attach the given layer of each texture to the framebuffer.
+ */
+static void
+framebuffer_attach_textures(int level, int layer)
+{
+	texture_attach_layer_to_framebuffer(color_tex, level, layer,
+					   GL_COLOR_ATTACHMENT0);
+
 	if (attach_together) {
-		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER,
-				       GL_DEPTH_STENCIL_ATTACHMENT,
-				       GL_TEXTURE_2D, depth_tex, level);
+		texture_attach_layer_to_framebuffer(
+			depth_tex, level, layer,
+			GL_DEPTH_STENCIL_ATTACHMENT);
 	} else if (attach_stencil_first) {
-		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER,
-				       GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D,
-				       stencil_tex, level);
-		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER,
-				       GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
-				       depth_tex, level);
+		texture_attach_layer_to_framebuffer(
+			stencil_tex, level, layer,
+			GL_STENCIL_ATTACHMENT);
+		texture_attach_layer_to_framebuffer(
+			depth_tex, level, layer,
+			GL_DEPTH_ATTACHMENT);
 	} else {
 		if (attach_depth) {
-			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER,
-					       GL_DEPTH_ATTACHMENT,
-					       GL_TEXTURE_2D,
-					       depth_tex, level);
+		texture_attach_layer_to_framebuffer(
+			depth_tex, level, layer,
+			GL_DEPTH_ATTACHMENT);
 		}
 		if (attach_stencil) {
-			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER,
-					       GL_STENCIL_ATTACHMENT,
-					       GL_TEXTURE_2D,
-					       stencil_tex, level);
+		texture_attach_layer_to_framebuffer(
+			stencil_tex, level, layer,
+			GL_STENCIL_ATTACHMENT);
 		}
 	}
 
 	/* Some implementations don't support certain buffer
 	 * combinations, and that's ok, provided that the
 	 * implementation reports GL_FRAMEBUFFER_UNSUPPORTED.
-	 * However, if the buffer combination was supported at
-	 * miplevel 0, it should be supported at all miplevels.
+	 * However, if the first call to this function resulted in a supported
+	 * framebuffer combination, then all future calls should result in
+	 * a supported framebuffer.
 	 */
+	static bool once = true;
 	GLenum status = glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER);
-	if (status == GL_FRAMEBUFFER_UNSUPPORTED && level == 0) {
+
+	if (once && status == GL_FRAMEBUFFER_UNSUPPORTED) {
 		printf("This buffer combination is unsupported\n");
 		piglit_report_result(PIGLIT_SKIP);
 	} else if (status != GL_FRAMEBUFFER_COMPLETE) {
-		printf("FBO incomplete at miplevel %d\n", level);
+		printf("FBO incomplete for level=%d layer=%d\n",
+		       level, layer);
 		piglit_report_result(PIGLIT_FAIL);
 	}
-}
 
-uint8_t
-stencil_for_level(int level)
-{
-	float float_value = float(level + 1) / (max_miplevel + 1);
-	return (uint8_t) round(float_value * 255.0);
+	once = false;
 }
 
 /**
  * Using glClear, set the contents of the depth and stencil buffers
- * (if present) to a value that is unique to this miplevel.
+ * (if present) to a value that is unique for the given layer.
  */
-void
-populate_miplevel(int level)
+static void
+framebuffer_populate_pixels(int level, int layer)
 {
-	float float_value = float(level + 1) / (max_miplevel + 1);
 	GLbitfield clear_mask = 0;
 
 	if (attach_depth) {
-		glClearDepth(float_value);
+		glClearDepth(texture_get_layer(depth_tex, level, layer)->depth.expected_value);
 		clear_mask |= GL_DEPTH_BUFFER_BIT;
 	}
 	if (attach_stencil) {
-		glClearStencil(stencil_for_level(level));
+		glClearStencil(texture_get_layer(stencil_tex, level, layer)->stencil.expected_value);
 		clear_mask |= GL_STENCIL_BUFFER_BIT;
 	}
 
@@ -505,44 +478,59 @@ populate_miplevel(int level)
 
 /**
  * Test that every pixel in the depth and stencil buffers (if present)
- * is equal to the value set by populate_miplevel.
+ * is equal to the expected value.
  *
  * If we're going to later render our results to the screen for
  * debugging, then save off a copy of the data we read now.
  */
-bool
-test_miplevel(int level)
+static bool
+framebuffer_probe(int level, int layer)
 {
 	bool pass = true;
-	int dim = miplevel0_size >> level;
-	float float_value = float(level + 1) / (max_miplevel + 1);
 
 	if (attach_depth) {
-		printf("Probing miplevel %d depth\n", level);
-		pass = piglit_probe_rect_depth(0, 0, dim, dim, float_value)
-			&& pass;
+		const struct texture_level *depth_level =
+			texture_get_level(depth_tex, level);
+
+		const struct texture_layer *depth_layer =
+			texture_get_layer(depth_tex, level, layer);
+
+		printf("Probing level=%d layer=%d depth\n", level, layer);
+		pass &= piglit_probe_rect_depth(
+				0, 0,
+				depth_level->width, depth_level->height,
+				depth_layer->depth.expected_value);
 
 		if (!piglit_automatic) {
-			depth_miplevel_data[level] =
-				(float *)malloc(4 * dim * dim);
-			glReadPixels(0, 0, dim, dim,
-				     GL_DEPTH_COMPONENT, GL_FLOAT,
-				     depth_miplevel_data[level]);
+			glReadPixels(0, 0,
+				     depth_level->width,
+				     depth_level->height,
+				     depth_layer->depth.readpixels_format,
+				     depth_layer->depth.readpixels_type,
+				     depth_layer->depth.readpixels_data);
 		}
 	}
 
 	if (attach_stencil) {
-		printf("Probing miplevel %d stencil\n", level);
-		pass = piglit_probe_rect_stencil(0, 0, dim, dim,
-						 stencil_for_level(level))
-			&& pass;
+		const struct texture_level *stencil_level =
+			texture_get_level(stencil_tex, level);
+
+		const struct texture_layer *stencil_layer =
+			texture_get_layer(stencil_tex, level, layer);
+
+		printf("Probing level=%d layer=%d stencil\n", level, layer);
+		pass &= piglit_probe_rect_stencil(
+				0, 0,
+				stencil_level->width, stencil_level->height,
+				stencil_layer->stencil.expected_value);
 
 		if (!piglit_automatic) {
-			stencil_miplevel_data[level] =
-				(uint8_t *)malloc(dim * dim);
-			glReadPixels(0, 0, dim, dim,
-				     GL_STENCIL_INDEX, GL_UNSIGNED_BYTE,
-				     stencil_miplevel_data[level]);
+			glReadPixels(0, 0,
+				     stencil_level->width,
+				     stencil_level->height,
+				     stencil_layer->stencil.readpixels_format,
+				     stencil_layer->stencil.readpixels_type,
+				     stencil_layer->stencil.readpixels_data);
 		}
 	}
 
@@ -617,17 +605,8 @@ parse_args(int argc, char *argv[])
 	/* Parse texture size. */
 	miplevel0_size = parse_int(pop_arg0(&argc, argv));
 
-	/* Now figure out the appropriate value of max_miplevel for this size. */
-	max_miplevel = 0;
-	while ((miplevel0_size >> (max_miplevel + 1)) > 0)
-		++max_miplevel;
-
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-	depth_miplevel_data = (float **)calloc(max_miplevel, sizeof(float *));
-	stencil_miplevel_data = (uint8_t **)calloc(max_miplevel,
-						   sizeof(uint8_t *));
 
 	/* Parse buffer combination. */
 	arg = pop_arg0(&argc, argv);
@@ -734,20 +713,26 @@ piglit_init(int argc, char **argv)
 {
 	bool pass = true;
 	GLuint fbo;
+	int width0;
+	int height0;
 
 	parse_args(argc, argv);
+	width0 = height0 = miplevel0_size;
 
-	color_tex = create_mipmapped_tex(GL_RGBA);
+	color_tex = texture_new(GL_TEXTURE_2D, GL_RGBA, width0, height0);
 
 	if (attach_depth) {
-		depth_tex = create_mipmapped_tex(depth_format);
+		depth_tex = texture_new(GL_TEXTURE_2D, depth_format,
+					width0, height0);
 	}
 
 	if (attach_stencil) {
 		if (shared_attachment) {
 			stencil_tex = depth_tex;
 		} else {
-			stencil_tex = create_mipmapped_tex(GL_DEPTH24_STENCIL8);
+			stencil_tex = texture_new(GL_TEXTURE_2D,
+						  GL_DEPTH24_STENCIL8,
+						  width0, height0);
 		}
 	}
 
@@ -755,14 +740,22 @@ piglit_init(int argc, char **argv)
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
 
-	for (int level = 0; level <= max_miplevel; ++level) {
-		set_up_framebuffer_for_miplevel(level);
-		populate_miplevel(level);
+	/* Iterate over the color texture's layers rather than the depth or
+	 * stencil texture's, because in some test modes one of depth or
+	 * stencil is missing. However, the color texture is always present and
+	 * its miptree layout is the same as that of the depth and stencil
+	 * textures.
+	 */
+	int level;
+	int layer;
+	texture_foreach_layer(color_tex, level, layer) {
+		framebuffer_attach_textures(level, layer);
+		framebuffer_populate_pixels(level, layer);
 	}
 
-	for (int level = 0; level <= max_miplevel; ++level) {
-		set_up_framebuffer_for_miplevel(level);
-		pass = test_miplevel(level) && pass;
+	texture_foreach_layer(color_tex, level, layer) {
+		framebuffer_attach_textures(level, layer);
+		pass &= framebuffer_probe(level, layer);
 	}
 
 	result = pass ? PIGLIT_PASS : PIGLIT_FAIL;
@@ -771,18 +764,21 @@ piglit_init(int argc, char **argv)
 }
 
 static void
-render_tex_to_screen(GLuint tex, int x, int y)
+render_tex_to_screen(const struct texture *red_tex, int x, int y)
 {
-	glBindTexture(GL_TEXTURE_2D, tex);
+	assert(red_tex->target == GL_TEXTURE_2D);
+
+	glBindTexture(GL_TEXTURE_2D, red_tex->name);
 	glEnable(GL_TEXTURE_2D);
 
-	for (int level = 0; level <= max_miplevel; ++level) {
-		int dim = miplevel0_size >> level;
+	for (int level = 0; level < red_tex->num_levels; ++level) {
+		const struct texture_level *red_level =
+			texture_get_level(red_tex, level);
 
-		piglit_draw_rect_tex(x, y, dim, dim,
+		piglit_draw_rect_tex(x, y,
+				     red_level->width, red_level->height,
 				     0, 0, 1, 1);
-
-		y += dim + 1;
+		y += red_level->height + 1;
 	}
 }
 
@@ -792,7 +788,9 @@ render_tex_to_screen(GLuint tex, int x, int y)
 static void
 render_results_to_screen()
 {
-	GLuint tex;
+	const struct texture *red_tex = texture_new(GL_TEXTURE_2D, GL_RGBA,
+						    color_tex->width0,
+						    color_tex->height0);
 
 	printf("\n");
 	printf("Depth is on the left, stencil is on the right.\n");
@@ -802,48 +800,63 @@ render_results_to_screen()
 	 * actually use miptrees to draw our miptree, so it'll work
 	 * out.
 	 */
-	piglit_ortho_projection(MAX2(piglit_width, 2 * miplevel0_size),
-				MAX2(piglit_height, 2 * miplevel0_size),
+	piglit_ortho_projection(MAX2(piglit_width, 2 * red_tex->width0),
+				MAX2(piglit_height, 2 * red_tex->height0),
 				false);
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	glClearColor(0.5, 0.5, 0.5, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	glGenTextures(1, &tex);
-	glBindTexture(GL_TEXTURE_2D, tex);
+	glBindTexture(GL_TEXTURE_2D, red_tex->name);
 
 	if (attach_depth) {
-		for (int level = 0; level <= max_miplevel; ++level) {
-			int dim = miplevel0_size >> level;
+		int level;
+		int layer;
+		texture_foreach_layer(red_tex, level, layer) {
+			const struct texture_level *depth_level =
+				texture_get_level(depth_tex, level);
+
+			const struct texture_layer *depth_layer =
+				texture_get_layer(depth_tex, level, layer);
 
 			glTexImage2D(GL_TEXTURE_2D, level, GL_RGBA,
-				     dim, dim,
+				     depth_level->width, depth_level->height,
 				     0,
-				     GL_RED, GL_FLOAT,
-				     depth_miplevel_data[level]);
+				     GL_RED,
+				     depth_layer->depth.readpixels_type,
+				     depth_layer->depth.readpixels_data);
+
 			if (!piglit_check_gl_error(GL_NO_ERROR))
 				piglit_report_result(PIGLIT_FAIL);
 		}
 
-		render_tex_to_screen(tex, 0, 1);
+		render_tex_to_screen(red_tex, 0, 1);
 	}
 
 
 	if (attach_stencil) {
-		for (int level = 0; level <= max_miplevel; ++level) {
-			int dim = miplevel0_size >> level;
+		int level;
+		int layer;
+		texture_foreach_layer(red_tex, level, layer) {
+			const struct texture_level *stencil_level =
+				texture_get_level(stencil_tex, level);
+
+			const struct texture_layer *stencil_layer =
+				texture_get_layer(stencil_tex, level, layer);
 
 			glTexImage2D(GL_TEXTURE_2D, level, GL_RGBA,
-				     dim, dim,
+				     stencil_level->width, stencil_level->height,
 				     0,
-				     GL_RED, GL_UNSIGNED_BYTE,
-				     stencil_miplevel_data[level]);
+				     GL_RED,
+				     stencil_layer->stencil.readpixels_type,
+				     stencil_layer->stencil.readpixels_data);
+
 			if (!piglit_check_gl_error(GL_NO_ERROR))
 				piglit_report_result(PIGLIT_FAIL);
 		}
 
-		render_tex_to_screen(tex, miplevel0_size + 10, 1);
+		render_tex_to_screen(red_tex, red_tex->width0 + 10, 1);
 	}
 
 	piglit_present_results();
