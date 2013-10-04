@@ -202,8 +202,6 @@ bool attach_stencil = false;
 bool shared_attachment = false;
 bool attach_together = false;
 bool attach_stencil_first = false;
-GLenum depth_format;
-int miplevel0_size;
 
 static int
 minify(int n, int levels)
@@ -591,7 +589,9 @@ parse_int(char *arg)
 }
 
 static void
-parse_args(int argc, char *argv[])
+parse_args(int argc, char *argv[],
+	   GLenum *depth_format,
+	   int *width0, int *height0)
 {
 	char *arg;
 
@@ -603,7 +603,7 @@ parse_args(int argc, char *argv[])
 		print_usage_and_exit();
 
 	/* Parse texture size. */
-	miplevel0_size = parse_int(pop_arg0(&argc, argv));
+	*width0 = *height0 = parse_int(pop_arg0(&argc, argv));
 
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -615,89 +615,89 @@ parse_args(int argc, char *argv[])
 		attach_stencil = true;
 	} else if (strcmp(arg, "d=z24_s8") == 0) {
 		attach_depth = true;
-		depth_format = GL_DEPTH24_STENCIL8;
+		*depth_format = GL_DEPTH24_STENCIL8;
 	} else if (strcmp(arg, "d=z24") == 0) {
 		attach_depth = true;
-		depth_format = GL_DEPTH_COMPONENT24;
+		*depth_format = GL_DEPTH_COMPONENT24;
 	} else if (strcmp(arg, "d=z32f_s8") == 0) {
 		attach_depth = true;
-		depth_format = GL_DEPTH32F_STENCIL8;
+		*depth_format = GL_DEPTH32F_STENCIL8;
 	} else if (strcmp(arg, "d=z32f") == 0) {
 		attach_depth = true;
-		depth_format = GL_DEPTH_COMPONENT32F;
+		*depth_format = GL_DEPTH_COMPONENT32F;
 	} else if (strcmp(arg, "d=z16") == 0) {
 		attach_depth = true;
-		depth_format = GL_DEPTH_COMPONENT16;
+		*depth_format = GL_DEPTH_COMPONENT16;
 	} else if (strcmp(arg, "d=z24_s8_s=z24_s8") == 0) {
 		attach_depth = true;
 		attach_stencil = true;
-		depth_format = GL_DEPTH24_STENCIL8;
+		*depth_format = GL_DEPTH24_STENCIL8;
 	} else if (strcmp(arg, "d=z24_s=z24_s8") == 0) {
 		attach_depth = true;
 		attach_stencil = true;
-		depth_format = GL_DEPTH_COMPONENT24;
+		*depth_format = GL_DEPTH_COMPONENT24;
 	} else if (strcmp(arg, "s=z24_s8_d=z24_s8") == 0) {
 		attach_depth = true;
 		attach_stencil = true;
 		attach_stencil_first = true;
-		depth_format = GL_DEPTH24_STENCIL8;
+		*depth_format = GL_DEPTH24_STENCIL8;
 	} else if (strcmp(arg, "s=z24_s8_d=z24") == 0) {
 		attach_depth = true;
 		attach_stencil = true;
 		attach_stencil_first = true;
-		depth_format = GL_DEPTH_COMPONENT24;
+		*depth_format = GL_DEPTH_COMPONENT24;
 	} else if (strcmp(arg, "d=s=z24_s8") == 0) {
 		attach_depth = true;
 		attach_stencil = true;
 		shared_attachment = true;
-		depth_format = GL_DEPTH24_STENCIL8;
+		*depth_format = GL_DEPTH24_STENCIL8;
 	} else if (strcmp(arg, "s=d=z24_s8") == 0) {
 		attach_depth = true;
 		attach_stencil = true;
 		shared_attachment = true;
 		attach_stencil_first = true;
-		depth_format = GL_DEPTH24_STENCIL8;
+		*depth_format = GL_DEPTH24_STENCIL8;
 	} else if (strcmp(arg, "ds=z24_s8") == 0) {
 		attach_depth = true;
 		attach_stencil = true;
 		shared_attachment = true;
 		attach_together = true;
-		depth_format = GL_DEPTH24_STENCIL8;
+		*depth_format = GL_DEPTH24_STENCIL8;
 	} else if (strcmp(arg, "d=z32f_s8_s=z24_s8") == 0) {
 		attach_depth = true;
 		attach_stencil = true;
-		depth_format = GL_DEPTH32F_STENCIL8;
+		*depth_format = GL_DEPTH32F_STENCIL8;
 	} else if (strcmp(arg, "d=z32f_s=z24_s8") == 0) {
 		attach_depth = true;
 		attach_stencil = true;
-		depth_format = GL_DEPTH_COMPONENT32F;
+		*depth_format = GL_DEPTH_COMPONENT32F;
 	} else if (strcmp(arg, "s=z24_s8_d=z32f_s8") == 0) {
 		attach_depth = true;
 		attach_stencil = true;
 		attach_stencil_first = true;
-		depth_format = GL_DEPTH32F_STENCIL8;
+		*depth_format = GL_DEPTH32F_STENCIL8;
 	} else if (strcmp(arg, "s=z24_s8_d=z32f") == 0) {
 		attach_depth = true;
 		attach_stencil = true;
 		attach_stencil_first = true;
-		depth_format = GL_DEPTH_COMPONENT32F;
+		*depth_format = GL_DEPTH_COMPONENT32F;
 	} else if (strcmp(arg, "d=s=z32f_s8") == 0) {
 		attach_depth = true;
 		attach_stencil = true;
 		shared_attachment = true;
-		depth_format = GL_DEPTH32F_STENCIL8;
+		*depth_format = GL_DEPTH32F_STENCIL8;
 	} else if (strcmp(arg, "s=d=z32f_s8") == 0) {
 		attach_depth = true;
 		attach_stencil = true;
 		shared_attachment = true;
 		attach_stencil_first = true;
-		depth_format = GL_DEPTH32F_STENCIL8;
+		*depth_format = GL_DEPTH32F_STENCIL8;
 	} else if (strcmp(arg, "ds=z32f_s8") == 0) {
 		attach_depth = true;
 		attach_stencil = true;
 		shared_attachment = true;
 		attach_together = true;
-		depth_format = GL_DEPTH32F_STENCIL8;
+		*depth_format = GL_DEPTH32F_STENCIL8;
 	} else {
 		print_usage_and_exit();
 	}
@@ -713,11 +713,12 @@ piglit_init(int argc, char **argv)
 {
 	bool pass = true;
 	GLuint fbo;
+
+	GLenum depth_format;
 	int width0;
 	int height0;
 
-	parse_args(argc, argv);
-	width0 = height0 = miplevel0_size;
+	parse_args(argc, argv, &depth_format, &width0, &height0);
 
 	color_tex = texture_new(GL_TEXTURE_2D, GL_RGBA, width0, height0);
 
