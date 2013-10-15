@@ -203,6 +203,12 @@ bool shared_attachment = false;
 bool attach_together = false;
 bool attach_stencil_first = false;
 
+/**
+ * When displaying texture in non-auto mode, this is the size
+ * of padding, in pixels, between miplevels.
+ */
+static const int pad = 1;
+
 static int
 minify(int n, int levels)
 {
@@ -765,33 +771,108 @@ piglit_init(int argc, char **argv)
 }
 
 static void
-render_tex_to_screen(const struct texture *red_tex, int x, int y)
+texture_walk_redscale_layout(
+	const struct texture *tex,
+	int start_x, int start_y,
+	int *end_x, int *end_y,
+	void (*callback)(const struct texture *tex,
+			 int level, int layer, int x, int y,
+			 void *callback_data),
+	void *callback_data)
 {
-	assert(red_tex->target == GL_TEXTURE_2D);
+	int level, layer;
+	int x, y;
 
-	glBindTexture(GL_TEXTURE_2D, red_tex->name);
-	glEnable(GL_TEXTURE_2D);
+	*end_x = x = start_x;
+	*end_y = y = start_y;
 
-	for (int level = 0; level < red_tex->num_levels; ++level) {
-		const struct texture_level *red_level =
-			texture_get_level(red_tex, level);
+	texture_foreach_layer(tex, level, layer) {
+		const int width = texture_get_level(tex, level)->width;
+		const int height = texture_get_level(tex, level)->height;
 
-		piglit_draw_rect_tex(x, y,
-				     red_level->width, red_level->height,
-				     0, 0, 1, 1);
-		y += red_level->height + 1;
+		assert(tex->target == GL_TEXTURE_2D);
+		assert(layer == 0);
+
+		if (callback) {
+			callback(tex, level, layer, x, y, callback_data);
+		}
+
+		*end_x = MAX2(*end_x, x + width);
+		*end_y = MAX2(*end_y, y + height);
+
+		y += height + pad;
 	}
 }
 
-/**
- * Presents the results of the rendering on the screen.
- */
+static void
+texture_draw_redscale_slice(const struct texture *tex,
+			    int level, int layer,
+			    int x, int y,
+			    void *callback_data)
+{
+	const struct texture_level *tex_level = texture_get_level(tex, level);
+	const struct texture_layer *tex_layer = texture_get_layer(tex, level, layer);
+	const int width = tex_level->width;
+	const int height = tex_level->height;
+	GLenum *base_format = (GLenum*) callback_data;
+
+	GLenum type;
+	void *data;
+
+	assert(tex->target == GL_TEXTURE_2D);
+	assert(layer == 0);
+
+	switch (*base_format) {
+	case GL_DEPTH_COMPONENT:
+		type = tex_layer->depth.readpixels_type;
+		data = tex_layer->depth.readpixels_data;
+		break;
+	case GL_STENCIL_INDEX:
+		type = tex_layer->stencil.readpixels_type;
+		data = tex_layer->stencil.readpixels_data;
+		break;
+	default:
+		assert(0);
+		type = 0;
+		data = NULL;
+		break;
+	}
+
+	glTexImage2D(GL_TEXTURE_2D, /*level*/ 0, GL_RGBA,
+		     width, height,
+		     /*border_color*/ 0, GL_RED,
+		     type, data);
+
+	if (!piglit_check_gl_error(GL_NO_ERROR))
+		piglit_report_result(PIGLIT_FAIL);
+
+	piglit_draw_rect_tex(x, y, width, height,
+			     0, 0, 1, 1);
+
+	if (!piglit_check_gl_error(GL_NO_ERROR))
+		piglit_report_result(PIGLIT_FAIL);
+}
+
+static void
+texture_draw_redscale(const struct texture *tex,
+			    GLenum base_format,
+			    int start_x, int start_y,
+			    int *end_x, int *end_y)
+{
+	texture_walk_redscale_layout(
+		tex, start_x, start_y, end_x, end_y,
+		texture_draw_redscale_slice,
+		&base_format);
+
+}
+
 static void
 render_results_to_screen()
 {
-	const struct texture *red_tex = texture_new(GL_TEXTURE_2D, GL_RGBA,
-						    color_tex->width0,
-						    color_tex->height0);
+	GLuint red_tex;
+
+	int x;
+	int y;
 
 	printf("\n");
 	printf("Depth is on the left, stencil is on the right.\n");
@@ -801,66 +882,37 @@ render_results_to_screen()
 	 * actually use miptrees to draw our miptree, so it'll work
 	 * out.
 	 */
-	piglit_ortho_projection(MAX2(piglit_width, 2 * red_tex->width0),
-				MAX2(piglit_height, 2 * red_tex->height0),
+	piglit_ortho_projection(MAX2(piglit_width, 2 * color_tex->width0),
+				MAX2(piglit_height, 2 * color_tex->height0),
 				false);
+
+	glGenTextures(1, &red_tex);
+	glBindTexture(GL_TEXTURE_2D, red_tex);
+	glEnable(GL_TEXTURE_2D);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	glClearColor(0.5, 0.5, 0.5, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	glBindTexture(GL_TEXTURE_2D, red_tex->name);
-
+	x = 0;
+	y = 0;
 	if (attach_depth) {
-		int level;
-		int layer;
-		texture_foreach_layer(red_tex, level, layer) {
-			const struct texture_level *depth_level =
-				texture_get_level(depth_tex, level);
-
-			const struct texture_layer *depth_layer =
-				texture_get_layer(depth_tex, level, layer);
-
-			glTexImage2D(GL_TEXTURE_2D, level, GL_RGBA,
-				     depth_level->width, depth_level->height,
-				     0,
-				     GL_RED,
-				     depth_layer->depth.readpixels_type,
-				     depth_layer->depth.readpixels_data);
-
-			if (!piglit_check_gl_error(GL_NO_ERROR))
-				piglit_report_result(PIGLIT_FAIL);
-		}
-
-		render_tex_to_screen(red_tex, 0, 1);
+		texture_draw_redscale(depth_tex, GL_DEPTH_COMPONENT,
+			 	      x + pad, y + pad, &x, &y);
 	}
 
-
+	y = 0;
 	if (attach_stencil) {
-		int level;
-		int layer;
-		texture_foreach_layer(red_tex, level, layer) {
-			const struct texture_level *stencil_level =
-				texture_get_level(stencil_tex, level);
-
-			const struct texture_layer *stencil_layer =
-				texture_get_layer(stencil_tex, level, layer);
-
-			glTexImage2D(GL_TEXTURE_2D, level, GL_RGBA,
-				     stencil_level->width, stencil_level->height,
-				     0,
-				     GL_RED,
-				     stencil_layer->stencil.readpixels_type,
-				     stencil_layer->stencil.readpixels_data);
-
-			if (!piglit_check_gl_error(GL_NO_ERROR))
-				piglit_report_result(PIGLIT_FAIL);
-		}
-
-		render_tex_to_screen(red_tex, red_tex->width0 + 10, 1);
+		texture_draw_redscale(stencil_tex, GL_STENCIL_INDEX,
+				      x + 10*pad, y + pad, &x, &y);
 	}
 
 	piglit_present_results();
+
+	glDeleteTextures(1, &red_tex);
 }
 
 extern "C" enum piglit_result
@@ -873,3 +925,5 @@ piglit_display()
 }
 
 }; /* Anonymous namespace */
+
+// vim:noet sw=8 ts=8:
