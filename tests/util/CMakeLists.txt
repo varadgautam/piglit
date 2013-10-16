@@ -92,7 +92,7 @@ if(PIGLIT_BUILD_EGL_TESTS)
 	    )
 	set(UTIL_GL_LIBS
 		${UTIL_GL_LIBS}
-		${OPENGL_egl_LIBRARY}
+		${EGL_LDFLAGS}
 	)
 endif()
 

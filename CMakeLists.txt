@@ -135,13 +135,9 @@ IF(PIGLIT_BUILD_GLX_TESTS)
 ENDIF()
 
 if(PIGLIT_BUILD_EGL_TESTS)
-	FIND_LIBRARY(OPENGL_egl_LIBRARY
-		REQUIRED
-		NAMES EGL
-		PATHS /usr/lib
-	)
-
+	pkg_check_modules(EGL REQUIRED egl)
 	add_definitions(-DPIGLIT_HAS_EGL)
+	include_directories(${EGL_INCLUDE_DIRS})
 endif()
 
 # Check for presence of Python 2.6 or greater.
