@@ -93,8 +93,10 @@ IF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	pkg_check_modules(XCB_DRI2 QUIET xcb-dri2)
 
 	option(PIGLIT_BUILD_GLX_TESTS "Build tests that require GLX" ON)
+	option(PIGLIT_BUILD_EGL_TESTS "Build tests that require EGL" ON)
 ELSE()
 	option(PIGLIT_BUILD_GLX_TESTS "Build tests that require GLX" OFF)
+	option(PIGLIT_BUILD_EGL_TESTS "Build tests that require EGL" OFF)
 ENDIF()
 
 # Choose to build tests that use dma_buf.
@@ -131,6 +133,16 @@ endif()
 IF(PIGLIT_BUILD_GLX_TESTS)
 	pkg_check_modules(GLPROTO REQUIRED glproto)
 ENDIF()
+
+if(PIGLIT_BUILD_EGL_TESTS)
+	FIND_LIBRARY(OPENGL_egl_LIBRARY
+		REQUIRED
+		NAMES EGL
+		PATHS /usr/lib
+	)
+
+	add_definitions(-DPIGLIT_HAS_EGL)
+endif()
 
 # Check for presence of Python 2.6 or greater.
 foreach(python_cmd python2 python)
@@ -265,15 +277,6 @@ else (APPLE)
 		DOC "Include for GL/glext.h"
 	)
 endif (APPLE)
-
-FIND_LIBRARY(OPENGL_egl_LIBRARY
-      NAMES EGL
-      PATHS /usr/lib
-)
-
-if(OPENGL_egl_LIBRARY)
-    add_definitions(-DPIGLIT_HAS_EGL)
-endif()
 
 find_library(OPENGL_gles1_LIBRARY NAMES GLESv1_CM)
 find_library(OPENGL_gles2_LIBRARY NAMES GLESv2)
