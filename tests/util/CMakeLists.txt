@@ -85,7 +85,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	)
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 
-if(OPENGL_egl_LIBRARY)
+if(PIGLIT_BUILD_EGL_TESTS)
 	set(UTIL_GL_SOURCES
 	    ${UTIL_GL_SOURCES}
 	    piglit-util-egl.c
@@ -94,6 +94,6 @@ if(OPENGL_egl_LIBRARY)
 		${UTIL_GL_LIBS}
 		${OPENGL_egl_LIBRARY}
 	)
-endif(OPENGL_egl_LIBRARY)
+endif()
 
 piglit_include_target_api()
