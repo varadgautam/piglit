@@ -870,21 +870,39 @@ static void
 render_results_to_screen()
 {
 	GLuint red_tex;
+	GLuint program;
+	GLuint red_tex_uniform_location, proj_uniform_location;
 
 	int x;
 	int y;
 
+	const int proj_width = MAX2(piglit_width, 2 * color_tex->width0);
+	const int proj_height = MAX2(piglit_height, 2 * color_tex->height0);
+
+	const char vs[] =
+		"#version 120\n"
+		"uniform mat4 proj;\n"
+		"attribute vec4 piglit_vertex;\n"
+		"attribute vec4 piglit_texcoord;\n"
+		"varying vec2 tex_coord;\n"
+		"\n"
+		"void main () {\n"
+		"    gl_Position = proj * piglit_vertex;\n"
+		"    tex_coord = piglit_texcoord.xy;\n"
+		"}\n";
+
+	const char fs[] =
+		"#version 120\n"
+		"uniform sampler2D red_tex; /* defaults to 0 */\n"
+		"varying vec2 tex_coord;\n"
+		"\n"
+		"void main () {\n"
+		"    gl_FragColor = texture2D(red_tex, tex_coord);\n"
+		"}\n";
+
 	printf("\n");
 	printf("Depth is on the left, stencil is on the right.\n");
 	printf("Colors should proceed from nearly-black to nearly-red.\n");
-
-	/* If the miptree is too large, scale things down. We don't
-	 * actually use miptrees to draw our miptree, so it'll work
-	 * out.
-	 */
-	piglit_ortho_projection(MAX2(piglit_width, 2 * color_tex->width0),
-				MAX2(piglit_height, 2 * color_tex->height0),
-				false);
 
 	glGenTextures(1, &red_tex);
 	glBindTexture(GL_TEXTURE_2D, red_tex);
@@ -892,6 +910,23 @@ render_results_to_screen()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	program = piglit_build_simple_program_unlinked(vs, fs);
+	glBindAttribLocation(program, PIGLIT_ATTRIB_POS, "piglit_vertex");
+	glBindAttribLocation(program, PIGLIT_ATTRIB_TEX, "piglit_texcoord");
+	glLinkProgram(program);
+	glUseProgram(program);
+
+	red_tex_uniform_location = glGetUniformLocation(program, "red_tex");
+	assert(red_tex_uniform_location >= 0);
+	glUniform1i(red_tex_uniform_location, 0);
+
+	proj_uniform_location = glGetUniformLocation(program, "proj");
+	assert(proj_uniform_location >= 0);
+	piglit_gen_ortho_uniform(proj_uniform_location,
+				 0, proj_width,
+				 0, proj_height,
+				 -1, 1);
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	glClearColor(0.5, 0.5, 0.5, 0.0);
