@@ -89,9 +89,6 @@
 PIGLIT_GL_TEST_CONFIG_BEGIN
 
 	config.supports_gl_compat_version = 10;
-
-	config.window_width = 512;
-	config.window_height = 512;
 	config.window_visual = PIGLIT_GL_VISUAL_RGB | PIGLIT_GL_VISUAL_DOUBLE;
 
 PIGLIT_GL_TEST_CONFIG_END
@@ -207,7 +204,7 @@ bool attach_stencil_first = false;
  * When displaying texture in non-auto mode, this is the size
  * of padding, in pixels, between miplevels.
  */
-static const int pad = 1;
+static const int pad = 8;
 
 static int
 minify(int n, int levels)
@@ -800,8 +797,23 @@ texture_walk_redscale_layout(
 		*end_x = MAX2(*end_x, x + width);
 		*end_y = MAX2(*end_y, y + height);
 
-		y += height + pad;
+		if (level == 0) {
+			y += height + pad;
+		} else if (level == 1) {
+			x += width + pad;
+		} else {
+			y += height + pad;
+		}
 	}
+}
+
+static void
+texture_get_redscale_size(const struct texture *tex,
+			  int *width, int *height)
+{
+	texture_walk_redscale_layout(tex, 0, 0, width, height,
+				     NULL /*callback*/,
+				     NULL /*callback_data*/);
 }
 
 static void
@@ -876,8 +888,8 @@ render_results_to_screen()
 	int x;
 	int y;
 
-	const int proj_width = MAX2(piglit_width, 2 * color_tex->width0);
-	const int proj_height = MAX2(piglit_height, 2 * color_tex->height0);
+	int redscale_width, redscale_height;
+	int proj_width, proj_height;
 
 	const char vs[] =
 		"#version 120\n"
@@ -888,6 +900,7 @@ render_results_to_screen()
 		"\n"
 		"void main () {\n"
 		"    gl_Position = proj * piglit_vertex;\n"
+		"    gl_Position.y *= -1;\n"
 		"    tex_coord = piglit_texcoord.xy;\n"
 		"}\n";
 
@@ -903,6 +916,8 @@ render_results_to_screen()
 	printf("\n");
 	printf("Depth is on the left, stencil is on the right.\n");
 	printf("Colors should proceed from nearly-black to nearly-red.\n");
+
+	glViewport(0, 0, piglit_width, piglit_height);
 
 	glGenTextures(1, &red_tex);
 	glBindTexture(GL_TEXTURE_2D, red_tex);
@@ -920,6 +935,14 @@ render_results_to_screen()
 	red_tex_uniform_location = glGetUniformLocation(program, "red_tex");
 	assert(red_tex_uniform_location >= 0);
 	glUniform1i(red_tex_uniform_location, 0);
+
+	texture_get_redscale_size(color_tex, &redscale_width, &redscale_height);
+	if (attach_depth && attach_stencil) {
+		proj_width = pad + redscale_width + pad + redscale_width + pad;
+	} else {
+		proj_width = pad + redscale_width + pad;
+	}
+	proj_height = pad + redscale_height + pad;
 
 	proj_uniform_location = glGetUniformLocation(program, "proj");
 	assert(proj_uniform_location >= 0);
@@ -942,7 +965,7 @@ render_results_to_screen()
 	y = 0;
 	if (attach_stencil) {
 		texture_draw_redscale(stencil_tex, GL_STENCIL_INDEX,
-				      x + 10*pad, y + pad, &x, &y);
+				      x + pad, y + pad, &x, &y);
 	}
 
 	piglit_present_results();
