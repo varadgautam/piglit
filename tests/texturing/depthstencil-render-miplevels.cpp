@@ -38,7 +38,8 @@
  * - Miplevels being laid out incorrectly in memory (e.g. in an
  *   overlapping fashion)
  *
- * Usage: depthstencil-render-miplevels GL_TEXTURE_2D <texture_size> <buffer_combination>
+ * Usage:
+ *   depthstencil-render-miplevels GL_TEXTURE_2D <width0> <height0> <buffer_combination>
  *
  *   Available buffer combinations:
  *   s=z24_s8
@@ -541,7 +542,7 @@ framebuffer_probe(int level, int layer)
 static void
 print_usage_and_exit(void)
 {
-	printf("Usage: %s GL_TEXTURE_2D <texture_size> <buffer_combination>\n"
+	printf("Usage: %s GL_TEXTURE_2D <width0> <height0> <buffer_combination>\n"
 	       "    Available buffer combinations:\n"
 	       "    s=z24_s8\n"
 	       "    d=z24_s8\n"
@@ -606,7 +607,8 @@ parse_args(int argc, char *argv[],
 		print_usage_and_exit();
 
 	/* Parse texture size. */
-	*width0 = *height0 = parse_int(pop_arg0(&argc, argv));
+	*width0 = parse_int(pop_arg0(&argc, argv));
+	*height0 = parse_int(pop_arg0(&argc, argv));
 
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
