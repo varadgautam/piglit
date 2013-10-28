@@ -24,22 +24,27 @@
 /** \file depthstencil-render-miplevels.cpp
  *
  * Test that data rendered to depth and stencil textures
- * always lands at the correct miplevel.
+ * always lands at the correct miptree slice.
  *
  * This test operates by creating a set of texture buffers, attaching
- * them to a framebuffer one miplevel at a time, and rendering
- * different data into each miplevel.  Then it verifies, using
- * glReadPixels, that the correct data appears at each miplevel.
+ * them to a framebuffer one miptree slice at a time, and rendering
+ * different data into each slice.  Then it verifies, using
+ * glReadPixels, that the correct data appears at each slice.
  *
  * This is useful in diagnosing bugs such as:
  *
- * - Incorrect miplevels being attached to the framebuffer
+ * - Incorrect miptree slices being attached to the framebuffer
  *
- * - Miplevels being laid out incorrectly in memory (e.g. in an
+ * - Miptree slices being laid out incorrectly in memory (e.g. in an
  *   overlapping fashion)
  *
  * Usage:
- *   depthstencil-render-miplevels GL_TEXTURE_2D <width0> <height0> <buffer_combination>
+ *
+ *   depthstencil-render-miplevels GL_TEXTURE_2D <width0> <height0>
+ *   	<buffer_combination>
+ *
+ *   depthstencil-render-miplevels GL_TEXTURE_2D_ARRAY <width0> <height0>
+ *       <num_layers> <buffer_combination>
  *
  *   Available buffer combinations:
  *   s=z24_s8
@@ -172,6 +177,12 @@ struct texture {
 	int width0;
 	int height0;
 
+	/**
+	 * For GL_TEXTURE_2D, depth0 is 1.
+	 * For GL_TEXTURE_2D_ARRAY, depth0 is the number array layers.
+	 */
+	int depth0;
+
 	int num_levels;
 	struct texture_level *levels;
 };
@@ -179,9 +190,8 @@ struct texture {
 #define texture_foreach_layer(tex, level, layer) \
 	\
 	for (level = 0, layer = 0; \
-	     level < tex->num_levels; \
-	     (++layer == tex->levels[level].num_layers) \
-		&& ((layer = 0), ++level))
+	     layer < tex->levels[level].num_layers; \
+	     (++level == tex->num_levels) && ((level = 0), ++layer))
 
 /**
  * The final test result. It's global because piglit_init() must pass it
@@ -203,7 +213,7 @@ bool attach_stencil_first = false;
 
 /**
  * When displaying texture in non-auto mode, this is the size
- * of padding, in pixels, between miplevels.
+ * of padding, in pixels, between miptree slices.
  */
 static const int pad = 8;
 
@@ -241,14 +251,19 @@ static void
 texture_init_layer(struct texture *tex, int level, int layer)
 {
 	struct texture_layer *l = &tex->levels[level].layers[layer];
+	const int num_layers = tex->levels[level].num_layers;
+	const int num_levels = tex->num_levels;
 	const int width = tex->levels[level].width;
 	const int height = tex->levels[level].height;
 
 	/* Calculate the value with which we later populate the layer.
 	 * We use a unique value for each layer. This allows us to detect
 	 * if one layer's data leaks into another layer.
+	 *
+	 * TODO: Verify this is unique for 8-bit stencil values.
 	 */
-	const float depth_value = ((float) level + 1) / tex->num_levels;
+	const float depth_value = (((float) level + 1) * num_layers + layer)
+				/ (num_layers * num_levels);
 
 	if (tex->format == GL_DEPTH_COMPONENT ||
 	    tex->format == GL_DEPTH_STENCIL) {
@@ -275,32 +290,47 @@ texture_init_level(struct texture *tex, int level)
 
 	l->width = minify(tex->width0, level);
 	l->height = minify(tex->height0, level);
-	l->num_layers = 1;
+
+	switch (tex->target) {
+	case GL_TEXTURE_2D:
+		assert(tex->depth0 == 1);
+		l->num_layers = 1;
+		glTexImage2D(tex->target, level, tex->internal_format,
+			     l->width, l->height,
+			     0 /*border*/,
+			     tex->format, tex->type, NULL);
+		break;
+	case GL_TEXTURE_2D_ARRAY:
+		l->num_layers = tex->depth0;
+		glTexImage3D(tex->target, level, tex->internal_format,
+			     l->width, l->height, l->num_layers,
+			     0 /*border*/,
+			     tex->format, tex->type, NULL);
+		break;
+	default:
+		assert(0);
+		break;
+	}
+
+	if (!piglit_check_gl_error(GL_NO_ERROR))
+		piglit_report_result(PIGLIT_FAIL);
+
 	l->layers = (typeof(l->layers)) malloc(l->num_layers *
 					       sizeof(l->layers[0]));
 
 	for (int layer = 0; layer < l->num_layers; ++layer) {
 		texture_init_layer(tex, level, layer);
 	}
-
-	glTexImage2D(tex->target, level, tex->internal_format,
-		     l->width, l->height, 0,
-		     tex->format, tex->type, NULL);
-
-	if (!piglit_check_gl_error(GL_NO_ERROR))
-		piglit_report_result(PIGLIT_FAIL);
 }
 
 static const struct texture*
 texture_new(GLenum target,
 	    GLenum internal_format,
 	    int width0,
-	    int height0)
+	    int height0,
+	    int depth0)
 {
 	struct texture *tex;
-
-	/* This test supports only GL_TEXTURE_2D. */
-	assert(target == GL_TEXTURE_2D);
 
 	check_internal_format(internal_format);
 
@@ -344,6 +374,7 @@ texture_new(GLenum target,
 
 	tex->width0 = width0;
 	tex->height0 = height0;
+	tex->depth0 = depth0;
 	tex->num_levels = 1 + MAX2(log2(width0), log2(height0));
 	tex->levels = (typeof(tex->levels)) malloc(tex->num_levels *
 						   sizeof(tex->levels[0]));
@@ -390,13 +421,24 @@ texture_attach_layer_to_framebuffer(const struct texture *tex,
 				   int level, int layer,
 				   GLenum attachment)
 {
-	/* Currently, the test supports only GL_TEXTURE_2D. */
-	assert(tex->target == GL_TEXTURE_2D);
 	texture_check_layer(tex, level, layer);
 
-	glFramebufferTexture2D(GL_FRAMEBUFFER,
-			       attachment, GL_TEXTURE_2D,
-			       tex->name, level);
+	switch (tex->target) {
+	case GL_TEXTURE_2D:
+		glFramebufferTexture2D(GL_FRAMEBUFFER,
+				       attachment, tex->target,
+				       tex->name, level);
+		break;
+	case GL_TEXTURE_2D_ARRAY:
+		glFramebufferTextureLayer(GL_FRAMEBUFFER,
+				          attachment, tex->name,
+					  level, layer);
+		break;
+	default:
+		assert(0);
+		break;
+	}
+
 
 	if (!piglit_check_gl_error(GL_NO_ERROR))
 		piglit_report_result(PIGLIT_FAIL);
@@ -542,7 +584,10 @@ framebuffer_probe(int level, int layer)
 static void
 print_usage_and_exit(void)
 {
-	printf("Usage: %s GL_TEXTURE_2D <width0> <height0> <buffer_combination>\n"
+	printf("Usage:\n"
+	       "    %1$s GL_TEXTURE_2D <width0> <height0> <buffer_combination>\n"
+	       "    %1$s GL_TEXTURE_2D_ARRAY <width0> <height0> <num_layers> <buffer_combination>\n"
+	       "\n"
 	       "    Available buffer combinations:\n"
 	       "    s=z24_s8\n"
 	       "    d=z24_s8\n"
@@ -594,8 +639,9 @@ parse_int(char *arg)
 
 static void
 parse_args(int argc, char *argv[],
+	   GLenum *tex_target,
 	   GLenum *depth_format,
-	   int *width0, int *height0)
+	   int *width0, int *height0, int *depth0)
 {
 	char *arg;
 
@@ -603,12 +649,31 @@ parse_args(int argc, char *argv[],
 
 	/* Parse texture target. */
 	arg = pop_arg0(&argc, argv);
-	if (strcmp(arg, "GL_TEXTURE_2D") != 0)
+	if (strcmp(arg, "GL_TEXTURE_2D") == 0) {
+		*tex_target = GL_TEXTURE_2D;
+	} else if (strcmp(arg, "GL_TEXTURE_2D_ARRAY") == 0) {
+		*tex_target = GL_TEXTURE_2D_ARRAY;
+	} else {
 		print_usage_and_exit();
+	}
 
 	/* Parse texture size. */
 	*width0 = parse_int(pop_arg0(&argc, argv));
 	*height0 = parse_int(pop_arg0(&argc, argv));
+
+	/* Parse depth0. */
+	switch (*tex_target) {
+	case GL_TEXTURE_2D:
+		*depth0 = 1;
+		break;
+	case GL_TEXTURE_2D_ARRAY:
+		*depth0 = parse_int(pop_arg0(&argc, argv));
+		break;
+	default:
+		assert(0);
+		*depth0 = 0;
+		break;
+	}
 
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -719,26 +784,29 @@ piglit_init(int argc, char **argv)
 	bool pass = true;
 	GLuint fbo;
 
+	GLenum tex_target;
 	GLenum depth_format;
 	int width0;
 	int height0;
+	int depth0;
 
-	parse_args(argc, argv, &depth_format, &width0, &height0);
+	parse_args(argc, argv, &tex_target, &depth_format,
+		   &width0, &height0, &depth0);
 
-	color_tex = texture_new(GL_TEXTURE_2D, GL_RGBA, width0, height0);
+	color_tex = texture_new(tex_target, GL_RGBA, width0, height0, depth0);
 
 	if (attach_depth) {
-		depth_tex = texture_new(GL_TEXTURE_2D, depth_format,
-					width0, height0);
+		depth_tex = texture_new(tex_target, depth_format,
+					width0, height0, depth0);
 	}
 
 	if (attach_stencil) {
 		if (shared_attachment) {
 			stencil_tex = depth_tex;
 		} else {
-			stencil_tex = texture_new(GL_TEXTURE_2D,
+			stencil_tex = texture_new(tex_target,
 						  GL_DEPTH24_STENCIL8,
-						  width0, height0);
+						  width0, height0, depth0);
 		}
 	}
 
@@ -789,9 +857,6 @@ texture_walk_redscale_layout(
 		const int width = texture_get_level(tex, level)->width;
 		const int height = texture_get_level(tex, level)->height;
 
-		assert(tex->target == GL_TEXTURE_2D);
-		assert(layer == 0);
-
 		if (callback) {
 			callback(tex, level, layer, x, y, callback_data);
 		}
@@ -799,7 +864,11 @@ texture_walk_redscale_layout(
 		*end_x = MAX2(*end_x, x + width);
 		*end_y = MAX2(*end_y, y + height);
 
-		if (level == 0) {
+		if (level == tex->num_levels - 1) {
+			/* Proceed to next layer. */
+			x = start_x;
+			y += height + pad;
+		} else if (level == 0) {
 			y += height + pad;
 		} else if (level == 1) {
 			x += width + pad;
@@ -832,9 +901,6 @@ texture_draw_redscale_slice(const struct texture *tex,
 
 	GLenum type;
 	void *data;
-
-	assert(tex->target == GL_TEXTURE_2D);
-	assert(layer == 0);
 
 	switch (*base_format) {
 	case GL_DEPTH_COMPONENT:
