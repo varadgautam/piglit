@@ -23,12 +23,6 @@
 #include "piglit-dispatch.h"
 #include "piglit-util-gl-common.h"
 
-#if defined(PIGLIT_USE_WAFFLE)
-#include <waffle.h>
-#include "piglit-util-waffle.h"
-#include "piglit-framework-gl.h"
-#endif
-
 #ifdef _WIN32
 #define inline __inline
 #endif
@@ -89,43 +83,6 @@ check_initialized()
 	assert(false);
 	exit(1);
 }
-
-#ifdef PIGLIT_USE_WAFFLE
-static enum waffle_enum piglit_waffle_dl = WAFFLE_DL_OPENGL;
-
-/**
- * Generated code calls this function to retrieve the address of a
- * core function.
- */
-static piglit_dispatch_function_ptr
-get_wfl_core_proc(const char *name, int gl_10x_version)
-{
-	piglit_dispatch_function_ptr func;
-
-	func = (piglit_dispatch_function_ptr)waffle_dl_sym(piglit_waffle_dl,
-							   name);
-	if (!func)
-		wfl_log_error(__FUNCTION__);
-
-	return func;
-}
-
-/**
- * Generated code calls this function to retrieve the address of a
- * core function.
- */
-static piglit_dispatch_function_ptr
-get_wfl_ext_proc(const char *name)
-{
-	piglit_dispatch_function_ptr func;
-
-	func = (piglit_dispatch_function_ptr)waffle_get_proc_address(name);
-	if (!func)
-		wfl_log_error(__FUNCTION__);
-
-	return func;
-}
-#endif
 
 /**
  * Generated code calls this function to retrieve the address of a
@@ -221,11 +178,7 @@ default_get_proc_address_failure(const char *function_name)
  * function (e.g. glXGetProcAddressARB).  However, in GLES, core
  * functions are not allowed to be queried using the GetProcAddress
  * mechanism, so get_core_proc will need to be implemented by looking
- * up a symbol in a shared library (e.g. using dlsym()).  When Waffle
- * is in use, these are ignored and replaced with the Waffle functions
- * that do the appropriate lookup according to the platform.  One day
- * we'll drop non-waffle support and remove this part of the
- * interface.
+ * up a symbol in a shared library (e.g. using dlsym()).
  *
  * \param unsupported_proc is the function to call if a test attempts
  * to use unsupported GL functionality.  It is passed the name of the
@@ -261,25 +214,6 @@ piglit_dispatch_init(piglit_dispatch_api api,
 	} else {
 		get_proc_address_failure = failure_proc;
 	}
-
-#ifdef PIGLIT_USE_WAFFLE
-	switch (api) {
-	case PIGLIT_DISPATCH_GL:
-		piglit_waffle_dl = WAFFLE_DL_OPENGL;
-		break;
-	case PIGLIT_DISPATCH_ES1:
-		piglit_waffle_dl = WAFFLE_DL_OPENGL_ES1;
-		break;
-	case PIGLIT_DISPATCH_ES2:
-		piglit_waffle_dl = WAFFLE_DL_OPENGL_ES2;
-		break;
-	}
-
-	if (gl_fw) {
-		get_core_proc_address = get_wfl_core_proc;
-		get_ext_proc_address = get_wfl_ext_proc;
-	}
-#endif
 
 	/* No need to reset the dispatch pointers the first time */
 	if (is_initialized) {

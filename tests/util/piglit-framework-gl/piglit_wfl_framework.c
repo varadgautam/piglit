@@ -21,7 +21,14 @@
  * IN THE SOFTWARE.
  */
 
+#include <stdbool.h>
 #include <stdio.h>
+
+#if defined(PIGLIT_USE_OPENGL) \
+    || defined(PIGLIT_USE_OPENGL_ES2) \
+    || defined(PIGLIT_USE_OPENGL_ES3)
+#include "piglit-dispatch.h"
+#endif
 
 #include "piglit-util-gl-common.h"
 #include "piglit-util-waffle.h"
@@ -39,6 +46,49 @@ piglit_wfl_framework(struct piglit_gl_framework *gl_fw)
 {
 	return (struct piglit_wfl_framework*) gl_fw;
 }
+
+#if defined(PIGLIT_USE_OPENGL) \
+    || defined(PIGLIT_USE_OPENGL_ES2) \
+    || defined(PIGLIT_USE_OPENGL_ES3)
+/**
+ * piglit-dispatch calls this function to retrieve the address of core
+ * functions.
+ */
+static piglit_dispatch_function_ptr
+piglit_wfl_get_core_proc(const char *name, int gl_10x_version)
+{
+#ifdef PIGLIT_USE_OPENGL
+	static const enum waffle_enum dl = WAFFLE_DL_OPENGL;
+#elif defined(PIGLIT_USE_OPENGL_ES2) || defined(PIGLIT_USE_OPENGL_ES3)
+	static const enum waffle_enum dl = WAFFLE_DL_OPENGL_ES2;
+#else
+#error
+#endif
+	piglit_dispatch_function_ptr func;
+
+	func = (piglit_dispatch_function_ptr) waffle_dl_sym(dl, name);
+	if (!func)
+		wfl_log_error(__FUNCTION__);
+
+	return func;
+}
+
+/**
+ * piglit-dispatch calls this function to retrieve the address of extension
+ * functions.
+ */
+static piglit_dispatch_function_ptr
+piglit_wfl_get_ext_proc(const char *func_name)
+{
+	piglit_dispatch_function_ptr func;
+
+	func = (piglit_dispatch_function_ptr) waffle_get_proc_address(func_name);
+	if (!func)
+		wfl_log_error(__FUNCTION__);
+
+	return func;
+}
+#endif
 
 int32_t
 piglit_wfl_framework_choose_platform(const struct piglit_gl_test_config *test_config)
@@ -335,6 +385,12 @@ make_context_current_singlepass(struct piglit_wfl_framework *wfl_fw,
                                 enum context_flavor flavor,
                                 const int32_t partial_config_attrib_list[])
 {
+#ifdef PIGLIT_USE_OPENGL
+	static const piglit_dispatch_api dispatch_api = PIGLIT_DISPATCH_GL;
+#elif defined(PIGLIT_USE_OPENGL_ES2) || defined(PIGLIT_USE_OPENGL_ES3)
+	static const piglit_dispatch_api dispatch_api = PIGLIT_DISPATCH_ES2;
+#endif
+
 	bool ok;
 
 	assert(wfl_fw->config == NULL);
@@ -360,10 +416,14 @@ make_context_current_singlepass(struct piglit_wfl_framework *wfl_fw,
 	                         wfl_fw->window,
 	                         wfl_fw->context);
 
-#ifdef PIGLIT_USE_OPENGL
-	piglit_dispatch_default_init(PIGLIT_DISPATCH_GL);
-#elif defined(PIGLIT_USE_OPENGL_ES2) || defined(PIGLIT_USE_OPENGL_ES3)
-	piglit_dispatch_default_init(PIGLIT_DISPATCH_ES2);
+#if defined(PIGLIT_USE_OPENGL) \
+    || defined(PIGLIT_USE_OPENGL_ES2) \
+    || defined(PIGLIT_USE_OPENGL_ES3)
+	piglit_dispatch_init(dispatch_api,
+			     piglit_wfl_get_core_proc,
+			     piglit_wfl_get_ext_proc,
+			     NULL,
+			     NULL);
 #endif
 
 	ok = check_gl_version(test_config, flavor);
