@@ -176,6 +176,36 @@ check_extension(const char *name)
 #include "generated_dispatch.c"
 
 /**
+ * Generated code calls this function if the test tries to use a GL
+ * function that is not supported on the current implementation.
+ *
+ * This function terminates the test with a SKIP; this saves the
+ * piglit test from the burden of having to pre-check whether the
+ * implementation supports the functionality being tested.
+ */
+static void
+default_unsupported_func_failure(const char *name)
+{
+	printf("Function \"%s\" not supported on this implementation\n", name);
+	piglit_report_result(PIGLIT_SKIP);
+}
+
+/**
+ * Generated code calls this function if a call to GetProcAddress()
+ * returns NULL.
+ *
+ * We don't expect this to ever happen, since we only call
+ * GetProcAddress() for functions that the implementation claims to
+ * support.  So if it does happen we terminate the test with a FAIL.
+ */
+static void
+default_get_proc_address_failure(const char *function_name)
+{
+	printf("GetProcAddress failed for \"%s\"\n", function_name);
+	piglit_report_result(PIGLIT_FAIL);
+}
+
+/**
  * Initialize the dispatch mechanism.
  *
  * \param api is the API under test.  This determines whether
@@ -199,12 +229,14 @@ check_extension(const char *name)
  *
  * \param unsupported_proc is the function to call if a test attempts
  * to use unsupported GL functionality.  It is passed the name of the
- * function that the test attempted to use.
+ * function that the test attempted to use. If unsupported_proc is NULL, then
+ * a sensible default function is used that reports PIGLIT_SKIP.
  *
  * \param failure_proc is the function to call if a call to
  * get_core_proc() or get_ext_proc() unexpectedly returned NULL.  It
  * is passed the name of the function that was passed to
- * get_core_proc() or get_ext_proc().
+ * get_core_proc() or get_ext_proc(). If failure_proc is NULL, then
+ * a sensible default function is used that reports PIGLIT_FAIL.
  */
 void
 piglit_dispatch_init(piglit_dispatch_api api,
@@ -217,8 +249,18 @@ piglit_dispatch_init(piglit_dispatch_api api,
 
 	get_core_proc_address = get_core_proc;
 	get_ext_proc_address = get_ext_proc;
-	unsupported = unsupported_proc;
-	get_proc_address_failure = failure_proc;
+
+	if (unsupported_proc == NULL) {
+		unsupported = default_unsupported_func_failure;
+	} else {
+		unsupported = unsupported_proc;
+	}
+
+	if (failure_proc == NULL) {
+		get_proc_address_failure = default_get_proc_address_failure;
+	} else {
+		get_proc_address_failure = failure_proc;
+	}
 
 #ifdef PIGLIT_USE_WAFFLE
 	switch (api) {

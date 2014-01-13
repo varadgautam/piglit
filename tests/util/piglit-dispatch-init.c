@@ -37,36 +37,6 @@
 
 #endif
 
-/**
- * Generated code calls this function if the test tries to use a GL
- * function that is not supported on the current implementation.
- *
- * This function terminates the test with a SKIP; this saves the
- * piglit test from the burden of having to pre-check whether the
- * implementation supports the functionality being tested.
- */
-static void
-default_unsupported(const char *name)
-{
-	printf("Function \"%s\" not supported on this implementation\n", name);
-	piglit_report_result(PIGLIT_SKIP);
-}
-
-/**
- * Generated code calls this function if a call to GetProcAddress()
- * returns NULL.
- *
- * We don't expect this to ever happen, since we only call
- * GetProcAddress() for functions that the implementation claims to
- * support.  So if it does happen we terminate the test with a FAIL.
- */
-static void
-default_get_proc_address_failure(const char *function_name)
-{
-	printf("GetProcAddress failed for \"%s\"\n", function_name);
-	piglit_report_result(PIGLIT_FAIL);
-}
-
 #if defined(_WIN32)
 
 /**
@@ -184,8 +154,8 @@ piglit_dispatch_default_init(piglit_dispatch_api api)
 	piglit_dispatch_init(api,
 			     get_core_proc_address,
 			     get_ext_proc_address,
-			     default_unsupported,
-			     default_get_proc_address_failure);
+			     NULL /*unsupported_proc*/,
+			     NULL /*failure_proc*/);
 
 	already_initialized = true;
 }
