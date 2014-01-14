@@ -90,6 +90,22 @@ check_initialized()
 	exit(1);
 }
 
+/**
+ * Get the API to which piglit-dispatch is set. If piglit-dispatch is
+ * uninitialized, then return PIGLIT_DISPATCH_NO_API.
+ */
+piglit_dispatch_api
+piglit_dispatch_get_api(void)
+{
+	if (is_initialized) {
+		printf("error: piglit_dispatch is not initialized\n");
+		piglit_report_result(PIGLIT_FAIL);
+	}
+
+	return dispatch_api;
+}
+
+
 #ifdef PIGLIT_USE_WAFFLE
 static enum waffle_enum piglit_waffle_dl = WAFFLE_DL_OPENGL;
 

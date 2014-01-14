@@ -162,6 +162,9 @@ piglit_dispatch_resolve_function(const char *name);
 
 void piglit_dispatch_default_init(piglit_dispatch_api api);
 
+piglit_dispatch_api
+piglit_dispatch_get_api(void);
+
 /* Prevent gl.h from being included, since it will attempt to define
  * the functions we've already defined.
  */
