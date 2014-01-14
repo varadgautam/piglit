@@ -471,12 +471,14 @@ class Api(object):
             if m:
                 # We do the regexp in two parts to make sure that we
                 # actually do catch all the GL_APICALLs.
-                m = re.match(r'^GL_APICALL\s*(.*)\s*GL_APIENTRY'
-                             '\s*gl(\w*)\s\((.*)\).*$', line)
-                return_type, name, args = m.groups()
+                m = re.match(r'^GL_APICALL\s*'
+                              '(?P<return_type>.*)\s*'
+                              'GL_APIENTRY\s*'
+                              'gl(?P<name>\w*)\s\((?P<args>.*)\).*$', line)
 
-                return_type = return_type.strip()
-                args = args.split(', ')
+                name = m.group('name')
+                return_type = m.group('return_type').strip()
+                args = m.group('args').split(', ')
 
                 if args == ['void']:
                     args = []
