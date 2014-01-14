@@ -563,8 +563,8 @@ if __name__ == '__main__':
     with open(sys.argv[6]) as f:
         api.read_gles_header(f, 1)
     with open(sys.argv[7]) as f:
-        api.read_gles_header(f, 3)
-    with open(sys.argv[8]) as f:
         api.read_gles_header(f, 2)
+    with open(sys.argv[8]) as f:
+        api.read_gles_header(f, 3)
     with open(sys.argv[9], 'w') as f:
         f.write(api.to_json())
