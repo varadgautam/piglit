@@ -45,10 +45,24 @@ extern const unsigned int fdo_bitmap_height;
 
 extern bool piglit_is_core_profile;
 
+enum piglit_gl_ctx_profile {
+	PIGLIT_GL_ES1_PROFILE,
+	PIGLIT_GL_ES2_PROFILE,
+	PIGLIT_GL_ES3_PROFILE,
+	PIGLIT_GL_CORE_PROFILE,
+	PIGLIT_GL_COMPAT_PROFILE,
+};
+
 /**
  * Determine if the API is OpenGL ES.
  */
 bool piglit_is_gles(void);
+
+/**
+ * \brief Get the profile of the current GL context.
+ */
+enum piglit_gl_ctx_profile
+piglit_get_gl_ctx_profile(void);
 
 /**
  * \brief Get version of OpenGL or OpenGL ES API.

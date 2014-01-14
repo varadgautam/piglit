@@ -43,6 +43,53 @@ bool piglit_is_gles(void)
 	return strncmp("OpenGL ES ", version_string, 10) == 0;
 }
 
+enum piglit_gl_ctx_profile
+piglit_get_gl_ctx_profile(void)
+{
+	const char *version_string = (const char *) glGetString(GL_VERSION);
+	bool gles;
+	int version;
+
+	gles = (strncmp("OpenGL ES ", version_string, 10) == 0);
+	version = piglit_get_gl_version();
+
+	if (gles) {
+		if ((version == 10 || version == 11)) {
+			return PIGLIT_GL_ES1_PROFILE;
+		} else if (version == 20) {
+			return PIGLIT_GL_ES2_PROFILE;
+		} else if (version == 30) {
+			return PIGLIT_GL_ES3_PROFILE;
+		}
+	} else {
+		if (version < 31) {
+			return PIGLIT_GL_COMPAT_PROFILE;
+		} else if (version == 31) {
+			if (piglit_is_extension_supported("GL_ARB_compatibility")) {
+				return PIGLIT_GL_COMPAT_PROFILE;
+			} else {
+				return PIGLIT_GL_CORE_PROFILE;
+			}
+		} else {
+			GLint flags;
+			glGetIntegerv(GL_CONTEXT_PROFILE_MASK, &flags);
+
+			if (flags & GL_CONTEXT_CORE_PROFILE_BIT) {
+				return PIGLIT_GL_CORE_PROFILE;
+			} else if (flags & GL_CONTEXT_COMPATIBILITY_PROFILE_BIT) {
+				return PIGLIT_GL_COMPAT_PROFILE;
+			}
+		}
+	}
+
+	printf("error: %s: context has unknown profile: %s\n",
+	       __func__, version_string);
+	piglit_report_result(PIGLIT_FAIL);
+
+	/* Return something to silence compiler warnings. */
+	return PIGLIT_GL_COMPAT_PROFILE;
+}
+
 int piglit_get_gl_version(void)
 {
 	const char *version_string = (const char *) glGetString(GL_VERSION);
