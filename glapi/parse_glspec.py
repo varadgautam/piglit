@@ -448,8 +448,15 @@ class Api(object):
             for alias in attributes['alias']:
                 self.synonyms.add_alias(name, alias)
 
-    def read_gles_header(self, f):
-        category = 'GL_ES_VERSION_2_0'
+    # Parameter gles_major_version must be 1, 2, or 3.
+    def read_gles_header(self, f, gles_major_version):
+        if gles_major_version == 1:
+            category = 'GL_ES_VERSION_1_0'
+        elif gles_major_version in (2, 3):
+            category = 'GL_ES_VERSION_2_0'
+        else:
+            raise
+
         for line in f:
             # The GLES gl3.h has typedefs, tokens, and prototypes,
             # each listed after a comment indicating whether they're
@@ -467,19 +474,21 @@ class Api(object):
                     # replace only the first occurence of 'GL_'
                     category = m.group(1).replace('GL_', '', 1)
 
-            m = re.match(r'GL_APICALL', line)
+            m = re.match(r'^GL_API(CALL)?>', line)
             if m:
                 # We do the regexp in two parts to make sure that we
                 # actually do catch all the GL_APICALLs.
-                m = re.match(r'^GL_APICALL\s*'
+                m = re.match(r'^GL_API(CALL)?\s*'
                               '(?P<return_type>.*)\s*'
                               'GL_APIENTRY\s*'
+                              '(?P<return_pointer>\*?)\s*'
                               'gl(?P<name>\w*)\s\((?P<args>.*)\).*$', line)
 
                 name = m.group('name')
-                return_type = m.group('return_type').strip()
+                return_type = m.group('return_type').strip() \
+                            + m.group('return_pointer')
                 args = m.group('args').split(', ')
-
+                print(args)
                 if args == ['void']:
                     args = []
                 param_names = []
@@ -550,8 +559,12 @@ if __name__ == '__main__':
     with open(sys.argv[4]) as f:
         api.read_enumext_spec(f)
     with open(sys.argv[5]) as f:
-        api.read_gles_header(f)
+        api.read_gles_header(f, 1)
     with open(sys.argv[6]) as f:
-        api.read_gles_header(f)
-    with open(sys.argv[7], 'w') as f:
+        api.read_gles_header(f, 1)
+    with open(sys.argv[7]) as f:
+        api.read_gles_header(f, 3)
+    with open(sys.argv[8]) as f:
+        api.read_gles_header(f, 2)
+    with open(sys.argv[9], 'w') as f:
         f.write(api.to_json())
