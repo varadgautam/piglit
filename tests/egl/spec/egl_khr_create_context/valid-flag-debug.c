@@ -136,7 +136,7 @@ try_debug_flag(EGLenum context_api, EGLenum context_bit)
 		break;
 	}
 
-	piglit_dispatch_default_init(dispatch_api);
+	piglit_egl_dispatch_init(dispatch_api);
 
 	switch (context_bit) {
 	case EGL_OPENGL_BIT:
