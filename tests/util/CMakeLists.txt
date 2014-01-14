@@ -10,6 +10,7 @@ set(UTIL_INCLUDES
 	)
 
 set(UTIL_SOURCES
+	piglit-dispatch.c
 	piglit-util.c
 	)
 
