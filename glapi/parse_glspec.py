@@ -448,6 +448,78 @@ class Api(object):
             for alias in attributes['alias']:
                 self.synonyms.add_alias(name, alias)
 
+    def read_gles1_core_header(self, f):
+        category = 'GL_ES_VERSION_1_0'
+        for line in f:
+            m = re.match(r'^GL_API', line)
+            if m:
+                # We do the regexp in two parts to make sure that we
+                # actually do catch all the GL_API calls.
+                m = re.match(r'^GL_API\s*(.*)\s*GL_APIENTRY'
+                             '\s*\*?gl(\w*)\s\((.*)\).*$', line)
+
+                return_type, name, args = m.groups()
+
+                return_type = return_type.strip()
+                args = args.split(', ')
+
+                if args == ['void']:
+                    args = []
+                param_names = []
+                param_types = []
+                for arg in args:
+                    splitloc = max(arg.rfind(' '), arg.rfind('*'))
+                    param_types.append(arg[:splitloc + 1])
+                    param_names.append(arg[splitloc + 1:])
+
+                self.add_function(name, return_type, param_names, param_types,
+                                  category)
+
+    def read_gles1_ext_header(self, f):
+        category = None
+        for line in f:
+            m = re.match(r'/\* (GL_.*) \*/', line)
+            if m:
+                # replace only the first occurence of 'GL_'
+                category = m.group(1).replace('GL_', '', 1)
+
+            m = re.match(r'^GL_API', line)
+            if m:
+                # We do the regexp in two parts to make sure that we
+                # actually do catch all the GL_API calls.
+                m = re.match(r'^GL_API\s*(.*)\s*GL_APIENTRY'
+                             '\s*\*?gl(\w*)\s\((.*)\).*$', line)
+
+                return_type, name, args = m.groups()
+
+                return_type = return_type.strip()
+                args = args.split(', ')
+
+                if args == ['void']:
+                    args = []
+                param_names = []
+                param_types = []
+                for arg in args:
+                    splitloc = max(arg.rfind(' '), arg.rfind('*'))
+                    param_types.append(arg[:splitloc + 1])
+                    param_names.append(arg[splitloc + 1:])
+
+                self.add_function(name, return_type, param_names, param_types,
+                                  category)
+
+                # Since we don't have alias information for
+                # extensions, assume that pretty much anything
+                # with the same base name as a core function is
+                # aliased with it.
+                #
+                # glTexImage3DOES is an exception because it
+                # doesn't have the border argument.
+                if name != 'TexImage3DOES':
+                    corename = EXTENSION_SUFFIX_REGEXP.sub('', name)
+                    if corename in self.functions:
+                        self.synonyms.add_alias(corename, name)
+
+
     def read_gles_header(self, f):
         category = 'GL_ES_VERSION_2_0'
         for line in f:
@@ -548,8 +620,12 @@ if __name__ == '__main__':
     with open(sys.argv[4]) as f:
         api.read_enumext_spec(f)
     with open(sys.argv[5]) as f:
-        api.read_gles_header(f)
+        api.read_gles1_core_header(f)
     with open(sys.argv[6]) as f:
+        api.read_gles1_ext_header(f)
+    with open(sys.argv[7]) as f:
         api.read_gles_header(f)
-    with open(sys.argv[7], 'w') as f:
+    with open(sys.argv[8]) as f:
+        api.read_gles_header(f)
+    with open(sys.argv[9], 'w') as f:
         f.write(api.to_json())

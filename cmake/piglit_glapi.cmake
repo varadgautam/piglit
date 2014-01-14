@@ -34,6 +34,8 @@ set(piglit_glapi_inputs
 	${piglit_glapi_src_dir}/gl.spec
 	${piglit_glapi_src_dir}/enum.spec
 	${piglit_glapi_src_dir}/enumext.spec
+	${piglit_glapi_src_dir}/GLES1/gl.h
+	${piglit_glapi_src_dir}/GLES1/glext.h
 	${piglit_glapi_src_dir}/GLES3/gl3.h
 	${piglit_glapi_src_dir}/GLES2/gl2ext.h
 	)
