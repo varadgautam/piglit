@@ -34,6 +34,8 @@
 extern "C" {
 #endif
 
+enum piglit_dispatch_api;
+
 /**
  * \brief Convert an EGL error to a string.
  *
@@ -75,6 +77,12 @@ void piglit_require_egl_extension(const char *name);
  */
 bool
 piglit_egl_bind_api(EGLenum api);
+
+/**
+ * Initialize piglit-dispatch for EGL tests.
+ */
+void
+piglit_egl_dispatch_init(enum piglit_dispatch_api api);
 
 #ifdef __cplusplus
 } /* end extern "C" */

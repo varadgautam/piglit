@@ -21,6 +21,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include "piglit-dispatch.h"
 #include "piglit-util-egl.h"
 
 const char* piglit_get_egl_error_name(EGLint error) {
@@ -122,4 +123,23 @@ piglit_egl_bind_api(EGLenum api)
 
 	assert(0);
 	return false;
+}
+
+static piglit_dispatch_function_ptr
+get_core_proc_address(const char *func_name, int gl_10x_version)
+{
+	(void) gl_10x_version;
+	return eglGetProcAddress(func_name);
+}
+
+void
+piglit_egl_dispatch_init(enum piglit_dispatch_api api)
+{
+	// FIXME(chadv): Don't use eglGetProcAddress here for the core proc
+	// func. The signatures don't match.
+	piglit_dispatch_init(api,
+			     get_core_proc_address,
+			     eglGetProcAddress /*get_ext_proc_address*/,
+			     NULL /*unsupported_proc_failure*/,
+			     NULL /*get_proc_address_failure*/);
 }
