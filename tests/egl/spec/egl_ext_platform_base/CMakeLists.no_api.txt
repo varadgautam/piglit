@@ -1,0 +1,20 @@
+link_libraries(piglitutil)
+
+if(PIGLIT_HAS_X11)
+	link_libraries(${X11_X11_LIB})
+endif()
+
+if(PIGLIT_HAS_WAYLAND)
+	link_libraries(${WAYLAND_LIBRARIES})
+endif()
+
+if(PIGLIT_HAS_GBM AND PIGLIT_HAS_UDEV)
+	link_libraries(${GBM_LIBRARIES} ${UDEV_LIBRARIES})
+endif()
+
+piglit_add_executable(egl_ext_platform_base
+	egl_ext_platform_base.c
+	x11.c wayland.c gbm.c
+)
+
+# vim: ft=cmake:
