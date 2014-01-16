@@ -3733,6 +3733,15 @@ spec['EGL_EXT_client_extensions'] = egl_ext_client_extensions
 for i in [1, 2, 3]:
     egl_ext_client_extensions['conformance test {0}'.format(i)] = concurrent_test('egl_ext_client_extensions {0}'.format(i))
 
+egl_ext_platform_base = Group()
+spec['EGL_EXT_platform_base'] = egl_ext_platform_base
+for platform_list in [
+        'wayland', 'gbm', 'x11',
+        'wayland,gbm', 'wayland,x11', 'wayland,x11', 'gbm,x11',
+        'wayland,gbm,x11',
+        ]:
+    egl_ext_platform_base[platform_list] = concurrent_test('egl_ext_platform_base {0}'.format(platform_list))
+
 gles20 = Group()
 spec['!OpenGL ES 2.0'] = gles20
 gles20['glsl-fs-pointcoord'] = concurrent_test('glsl-fs-pointcoord_gles2')
