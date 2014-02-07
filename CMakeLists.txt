@@ -111,6 +111,12 @@ IF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 		add_definitions(-DPIGLIT_HAS_GBM)
 	endif(GBM_FOUND)
 
+	pkg_check_modules(UDEV QUIET libudev)
+	if(UDEV_FOUND)
+		set(PIGLIT_HAS_UDEV True)
+		add_definitions(-DPIGLIT_HAS_UDEV)
+	endif()
+
 	pkg_check_modules(WAYLAND QUIET wayland-client wayland-egl)
 	if (WAYLAND_FOUND)
 		set(PIGLIT_HAS_WAYLAND True)
