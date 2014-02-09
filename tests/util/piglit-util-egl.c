@@ -82,6 +82,14 @@ piglit_is_egl_extension_supported(EGLDisplay egl_dpy, const char *name)
 	const char *const egl_extension_list =
 		eglQueryString(egl_dpy, EGL_EXTENSIONS);
 
+	/* If egl_dpy is EGL_NO_DISPLAY and the EGL implementation lacks
+	 * support for client extensions, then eglQueryString() will have
+	 * returned NULL.
+	 */
+	if (egl_extension_list == NULL) {
+		return false;
+	}
+
 	return piglit_is_extension_in_string(egl_extension_list, name);
 }
 
