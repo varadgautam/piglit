@@ -107,6 +107,12 @@ int asprintf(char **strp, const char *fmt, ...)
 
 #endif /* HAVE_ASPRINTF */
 
+bool
+streq(const char *a, const char *b)
+{
+	return strcmp(a, b) == 0;
+}
+
 /**
  * \brief Split \a string into an array of strings.
  *

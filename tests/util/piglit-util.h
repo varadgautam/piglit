@@ -123,6 +123,12 @@ enum piglit_result {
 #define MIN2(a, b) ((a) > (b) ? (b) : (a))
 #define MAX2(a, b) ((a) > (b) ? (a) : (b))
 
+
+/**
+ * Return true if and only if two string are equal according to strcmp().
+ */
+bool streq(const char *a, const char *b);
+
 /**
  * Determine if an extension is listed in an extension string
  *
