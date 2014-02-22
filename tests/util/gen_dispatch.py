@@ -20,41 +20,10 @@
 # IN THE SOFTWARE.
 
 # This script generates a C file (and corresponding header) allowing
-# Piglit to dispatch calls to OpenGL based on a JSON description of
-# the GL API (and extensions).
+# Piglit to dispatch calls to OpenGL based on the OpenGL API Registry gl.xml.
 #
-# Invoke this script with 3 command line arguments: the JSON input
-# filename, the C output filename, and the header outpit filename.
-#
-#
-# The input looks like this:
-#
-# {
-#   "categories": {
-#     <category name>: {
-#       "kind": <"GL" or "GLES" for a GL spec API, "extension" for an extension>,
-#       "gl_10x_version": <For a GL version, version number times 10>,
-#       "extension_name" <For an extension, name of the extension>
-#     }, ...
-#   },
-#   "enums": {
-#     <enum name, without "GL_" prefix>: {
-#       "value_int": <value integer>
-#       "value_str": <value string>
-#     }, ...
-#   },
-#   "functions": {
-#     <function name, without "gl" prefix>: {
-#       "categories": <list of categories in which this function appears>,
-#       "param_names": <list of param names>,
-#       "param_types": <list of param types>,
-#       "return_type": <type, or "void" if no return>
-#     }, ...
-#   },
-#   "function_alias_sets": {
-#     <list of synonymous function names>, ...
-#   },
-# }
+# Invoke this script with 3 command line arguments: the path to gl.xml,
+# the C output filename, and the header output filename.
 #
 #
 # The generated header consists of the following:
@@ -107,9 +76,9 @@
 #   static piglit_dispatch_function_ptr resolve_glMapBuffer()
 #   {
 #     if (check_version(15))
-#       piglit_dispatch_glMapBuffer = (PFNGLMAPBUFFERPROC) get_core_proc("glMapBuffer", 15);
+#       piglit_dispatch_glMapBuffer = (void*) get_core_proc("glMapBuffer", 15);
 #     else if (check_extension("GL_ARB_vertex_buffer_object"))
-#       piglit_dispatch_glMapBuffer = (PFNGLMAPBUFFERARBPROC) get_ext_proc("glMapBufferARB");
+#       piglit_dispatch_glMapBuffer = (void*) get_ext_proc("glMapBufferARB");
 #     else
 #       unsupported("MapBuffer");
 #     return (piglit_dispatch_function_ptr) piglit_dispatch_glMapBuffer;
@@ -145,10 +114,7 @@
 import collections
 import os.path
 import sys
-try:
-    import simplejson as json
-except:
-    import json
+from xml.etree import ElementTree
 
 
 # Generate a top-of-file comment cautioning that the file is
@@ -197,7 +163,6 @@ def fixup_param_name(name):
     else:
         return name
 
-
 # Internal representation of a category.
 #
 # - For a category representing a GL version, Category.kind is 'GL'
@@ -208,12 +173,15 @@ def fixup_param_name(name):
 #   'extension' and Category.extension_name is the extension name
 #   (including the 'GL_' prefix).
 class Category(object):
-    def __init__(self, json_data):
-        self.kind = json_data['kind']
-        if 'gl_10x_version' in json_data:
-            self.gl_10x_version = json_data['gl_10x_version']
-        if 'extension_name' in json_data:
-            self.extension_name = json_data['extension_name']
+    def __init__(self, xml_element):
+        if xml_element.tag == 'feature':
+            api = xml_element.attrib['api']
+            number = xml_element.attrib['number']
+            self.kind = 'GL' if api == 'gl' else 'GLES'
+            self.gl_10x_version = int(number.replace('.', ''))
+        else:
+            self.kind = 'extension'
+            self.extension_name = xml_element.attrib['name']
 
     # Generate a human-readable representation of the category (for
     # use in generated comments).
@@ -245,21 +213,41 @@ class Category(object):
 # - Function.return_type is the return type of the function, or 'void'
 #   if the function has no return.
 #
-# - Function.category is a Category object describing the extension or
-#   GL version the function is defined in.
+# - Function.categories is a list of Category objects describing the extension
+#   or GL version the function is defined in.
 class Function(object):
-    def __init__(self, name, json_data):
-        self.name = name
+    def __init__(self, xml_function):
+        proto = xml_function.find('proto')
+        self.gl_name = proto.find('name').text
         self.param_names = [
-            fixup_param_name(x) for x in json_data['param_names']]
-        self.param_types = json_data['param_types']
-        self.return_type = json_data['return_type']
-        self.categories = json_data['categories']
+            fixup_param_name(x.find('name').text)
+            for x in xml_function.findall('param')]
+        self.param_types = [
+            self.get_type(x)
+            for x in xml_function.findall('param')]
+        self.return_type = self.get_type(proto)
 
-    # Name of the function, with the 'gl' prefix.
+        # Categories are added later.
+        self.categories = []
+
+    # Helper to extract type information from gl.xml data.
+    @staticmethod
+    def get_type(xml_elem):
+        type_name = ""
+        if xml_elem.text: type_name += xml_elem.text
+        for child in xml_elem:
+            if child.tag == 'ptype':
+                if child.text: type_name += child.text
+            if child.tail: type_name += child.tail
+            if child.tag == 'name':
+                break
+        return type_name.strip()
+
+
+    # Name of the function, without the 'gl' prefix.
     @property
-    def gl_name(self):
-        return 'gl' + self.name
+    def name(self):
+        return self.gl_name.partition('gl')[2]
 
     # Name of the function signature typedef corresponding to this
     # function.  E.g. for the glGetString function, this is
@@ -297,9 +285,10 @@ class Function(object):
 # - Enum.value_str is the value of the enum, as a string suitable for
 #   emitting as C code.
 class Enum(object):
-    def __init__(self, json_data):
-        self.value_int = json_data['value_int']
-        self.value_str = json_data['value_str']
+    def __init__(self, xml_enum):
+        value = xml_enum.attrib['value']
+        self.value_int = int(value, base=0)
+        self.value_str = value
 
 
 # Data structure keeping track of a set of synonymous functions.  Such
@@ -379,17 +368,102 @@ class DispatchSet(object):
 # - Api.categories is a dict mapping category name to a Category
 #   object.
 class Api(object):
-    def __init__(self, json_data):
+    def __init__(self, xml_root):
+        # Parse enums.
         self.enums = dict(
-            (key, Enum(value))
-            for key, value in json_data['enums'].items())
+            (xml_enum.attrib['name'], Enum(xml_enum))
+            for xml_enums in xml_root.findall('enums')
+            for xml_enum in xml_enums.findall('enum'))
+
+        # Parse function prototypes ("commands" in gl.xml lingo).
+        xml_functions = xml_root.find('commands').findall('command')
         self.functions = dict(
-            (key, Function(key, value))
-            for key, value in json_data['functions'].items())
-        self.function_alias_sets = json_data['function_alias_sets']
-        self.categories = dict(
-            (key, Category(value))
-            for key, value in json_data['categories'].items())
+            (self.function_name(xml_function), Function(xml_function))
+            for xml_function in xml_functions)
+
+        self.fix_aliases(xml_functions)
+
+        # Parse function alias data.
+        self.function_alias_sets = [[self.function_name(xml_function)]
+            for xml_function in xml_functions
+            if not self.function_is_alias(xml_function)]
+        aliases = [(self.function_name(xml_function),
+                    self.function_alias(xml_function))
+            for xml_function in xml_functions
+            if self.function_is_alias(xml_function)]
+        self.merge_aliases(self.function_alias_sets, aliases)
+
+        self.categories = dict()
+        # Parse core api categories ("features" in gl.xml lingo).
+        for xml_feature in xml_root.findall('feature'):
+            api = xml_feature.attrib['api']
+            number = xml_feature.attrib['number']
+            name = number if (api == 'gl') else 'GLES' + number
+            self.categories[name] = Category(xml_feature)
+            self.add_category_to_functions(name, xml_feature)
+        # Parse GL extension categories.
+        for xml_extension in xml_root.find('extensions').findall('extension'):
+            name = xml_extension.attrib['name']
+            self.categories[name] = Category(xml_extension)
+            self.add_category_to_functions(name, xml_extension)
+
+    @staticmethod
+    def function_name(xml_function):
+        return xml_function.find('proto').find('name').text
+
+    @staticmethod
+    def function_alias(xml_function):
+        return xml_function.find('alias').attrib['name']
+
+    @staticmethod
+    def function_is_alias(xml_function):
+        return xml_function.find('alias') is not None
+
+    # glDebugMessageInsertARB and glDebugMessageControlARB are marked as
+    # aliases of the corresponding 4.3 core functions in gl.xml. This is not
+    # correct as the core functions accept additional enums for their type
+    # and severity parameters. Remove the aliases.
+    @classmethod
+    def fix_aliases(cls, xml_functions):
+        for xml_function in xml_functions:
+            if cls.function_name(xml_function) == 'glDebugMessageInsertARB':
+                xml_function.remove(xml_function.find('alias'))
+            if cls.function_name(xml_function) == 'glDebugMessageControlARB':
+                xml_function.remove(xml_function.find('alias'))
+
+    # Helper function to build list of aliases lists.
+    #
+    # merged -- list of n-tuples of function names that are aliases of each
+    #           other.
+    # to_merge -- list of 2-tuples to merge into merged.
+    #
+    # recursively try to merge aliases from to_merge into merged until to_merge
+    # is empty.
+    @staticmethod
+    def merge_aliases(merged, to_merge):
+        if not to_merge:
+            return
+        still_to_merge = []
+        for alias in to_merge:
+            i = next((i
+                for i, f in enumerate(merged)
+                if alias[1] in f), None)
+            if i != None:
+                merged[i].append(alias[0])
+            else:
+                still_to_merge.append(to_merge)
+
+        Api.merge_aliases(merged, still_to_merge)
+
+    # Add given category to all functions it requires.
+    #
+    # name -- category name e.g.: "1.5", "GLES2.0" or "GL_ARB_multitexture"
+    # xml_element -- xml element of category
+    def add_category_to_functions(self, name, xml_element):
+        for function in [cmd.attrib['name']
+                         for req in xml_element.findall('require')
+                         for cmd in req.findall('command')]:
+            self.functions[function].categories.append(name)
 
     # Generate a list of (name, value) pairs representing all enums in
     # the API.  The resulting list is sorted by enum value.
@@ -436,8 +510,8 @@ class Api(object):
 # Read the given input file and return an Api object containing the
 # data in it.
 def read_api(filename):
-    with open(filename, 'r') as f:
-        return Api(json.load(f))
+    tree = ElementTree.parse(filename)
+    return Api(tree.getroot())
 
 
 # Generate the resolve function for a given DispatchSet.
@@ -477,27 +551,12 @@ def generate_resolve_function(ds):
             raise Exception(
                 'Unexpected category type {0!r}'.format(category.kind))
 
-        if f.name == 'TexImage3DEXT':
-            # Special case: glTexImage3DEXT has a slightly different
-            # type than glTexImage3D (argument 3 is a GLenum rather
-            # than a GLint).  This is not a problem, since GLenum and
-            # GLint are treated identically by function calling
-            # conventions.  So when calling get_proc_address() on
-            # glTexImage3DEXT, cast the result to PFNGLTEXIMAGE3DPROC
-            # to avoid a warning.
-            typedef_name = 'PFNGLTEXIMAGE3DPROC'
-        else:
-            typedef_name = f.typedef_name
-
-        code = '{0} = ({1}) {2};'.format(
-            ds.dispatch_name, typedef_name, getter)
-
+        code = '{0} = (void*) {1};'.format(ds.dispatch_name, getter)
         condition_code_pairs.append((condition, code))
 
     # XXX: glDraw{Arrays,Elements}InstancedARB are exposed by
-    # ARB_instanced_arrays in addition to ARB_draw_instanced, but neither
-    # gl.spec nor gl.json can accomodate an extension with two categories, so
-    # insert these cases here.
+    # ARB_instanced_arrays in addition to ARB_draw_instanced, but gl.xml
+    # ignores the former, so insert these cases here.
         if f.gl_name in ('glDrawArraysInstancedARB',
                          'glDrawElementsInstancedARB'):
             condition = 'check_extension("GL_ARB_instanced_arrays")'
@@ -649,20 +708,14 @@ def generate_code(api):
 
     # Emit enum #defines
     for name, value in api.compute_unique_enums():
-        h_contents.append('#define GL_{0} {1}\n'.format(name, value))
+        h_contents.append('#define {0} {1}\n'.format(name, value))
 
     # Emit extension #defines
-    #
-    # While enum.ext lists some old extension names (defined to 1), it
-    # doesn't contain the full set that appears in glext.h.
     h_contents.append('\n')
     for ext in api.extensions:
         h_contents.append('#define {0} 1\n'.format(ext))
 
     # Emit GL version #defines
-    #
-    # While enum.ext lists GL versions up to 3.2, it didn't continue
-    # adding them for later GL versions.
     h_contents.append('\n')
     for ver in api.gl_versions:
         h_contents.append('#define GL_VERSION_{0}_{1} 1\n'.format(

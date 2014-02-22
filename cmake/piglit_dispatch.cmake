@@ -30,7 +30,7 @@ set(piglit_dispatch_gen_outputs
 
 set(piglit_dispatch_gen_inputs
 	${CMAKE_SOURCE_DIR}/tests/util/gen_dispatch.py
-	${CMAKE_BINARY_DIR}/glapi/glapi.json
+	${CMAKE_SOURCE_DIR}/glapi/gl.xml
 	)
 
 add_custom_command(

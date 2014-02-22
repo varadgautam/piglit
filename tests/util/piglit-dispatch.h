@@ -94,6 +94,7 @@ typedef unsigned short GLushort;
 typedef unsigned long GLulong;
 typedef float GLfloat;
 typedef float GLclampf;
+typedef int GLclampx;
 typedef double GLdouble;
 typedef double GLclampd;
 typedef void GLvoid;
