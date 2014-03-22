@@ -318,6 +318,24 @@ if(PIGLIT_HAS_POSIX_CLOCK_MONOTONIC)
 	add_definitions(-DPIGLIT_HAS_POSIX_CLOCK_MONOTONIC)
 endif()
 
+# Set PIGLIT_HAS_PTHREADS.
+FIND_LIBRARY(HAVE_PTHREADS pthread)
+if(HAVE_PTHREADS)
+	set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} pthread)
+endif()
+check_c_source_compiles(
+	"
+	#include <pthread.h>
+	int main() { return (int) pthread_self(); }
+	"
+	PIGLIT_HAS_PTHREADS
+)
+set(CMAKE_REQUIRED_LIBRARIES)
+
+if(PIGLIT_HAS_PTHREADS)
+	add_definitions(-DPIGLIT_HAS_PTHREADS)
+endif()
+
 if(PIGLIT_USE_WAFFLE AND ${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 	pkg_check_modules(EGL egl)
 endif()
