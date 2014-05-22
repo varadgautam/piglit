@@ -27,9 +27,6 @@
 /**
  * \file gl_wrap.h
  * \brief Convenience header that includes the actual OpenGL headers.
- *
- * The actual OpenGL headers are chosen according to the macro definitions
- * PIGLIT_USE_OPENGL, PIGLIT_USE_OPENGL_ES1, and PIGLIT_USE_OPENGL_ES2.
  */
 
 #pragma once
@@ -42,25 +39,7 @@ extern "C" {
 #include <windows.h>
 #endif
 
-#if (defined(PIGLIT_USE_OPENGL) || \
-     defined(PIGLIT_USE_OPENGL_ES2) || \
-     defined(PIGLIT_USE_OPENGL_ES3))
-#	include "piglit-dispatch.h"
-
-#elif defined(PIGLIT_USE_OPENGL_ES1)
-#	define GL_GLEXT_PROTOTYPES
-#	include <GLES/gl.h>
-#	include <GLES/glext.h>
-
-	/* for source level compatibility */
-#       define GL_TEXTURE_CUBE_MAP_POSITIVE_X GL_TEXTURE_CUBE_MAP_POSITIVE_X_OES
-#       define GL_TEXTURE_CUBE_MAP_POSITIVE_Y GL_TEXTURE_CUBE_MAP_POSITIVE_Y_OES
-#       define GL_TEXTURE_CUBE_MAP_POSITIVE_Z GL_TEXTURE_CUBE_MAP_POSITIVE_Z_OES
-#       define GL_TEXTURE_CUBE_MAP_NEGATIVE_X GL_TEXTURE_CUBE_MAP_NEGATIVE_X_OES
-#       define GL_TEXTURE_CUBE_MAP_NEGATIVE_Y GL_TEXTURE_CUBE_MAP_NEGATIVE_Y_OES
-#       define GL_TEXTURE_CUBE_MAP_NEGATIVE_Z GL_TEXTURE_CUBE_MAP_NEGATIVE_Z_OES
-
-#endif
+#include "piglit-dispatch.h"
 
 #ifdef __cplusplus
 } /* end extern "C" */
