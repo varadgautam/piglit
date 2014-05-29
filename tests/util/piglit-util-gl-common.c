@@ -807,3 +807,42 @@ piglit_draw_rect_tex(float x, float y, float w, float h,
 
 	piglit_draw_rect_from_arrays(verts, tex);
 }
+
+const char *
+piglit_get_prim_name(GLenum prim)
+{
+	switch (prim) {
+	case GL_POINTS:
+		return "GL_POINTS";
+	case GL_LINES:
+		return "GL_LINES";
+	case GL_LINE_STRIP:
+		return "GL_LINE_STRIP";
+	case GL_LINE_LOOP:
+		return "GL_LINE_LOOP";
+	case GL_TRIANGLES:
+		return "GL_TRIANGLES";
+	case GL_TRIANGLE_STRIP:
+		return "GL_TRIANGLE_STRIP";
+	case GL_TRIANGLE_FAN:
+		return "GL_TRIANGLE_FAN";
+	case GL_QUADS:
+		return "GL_QUADS";
+	case GL_QUAD_STRIP:
+		return "GL_QUAD_STRIP";
+	case GL_POLYGON:
+		return "GL_POLYGON";
+	case GL_LINES_ADJACENCY:
+		return "GL_LINES_ADJACENCY";
+	case GL_LINE_STRIP_ADJACENCY:
+		return "GL_LINE_STRIP_ADJACENCY";
+	case GL_TRIANGLES_ADJACENCY:
+		return "GL_TRIANGLES_ADJACENCY";
+	case GL_TRIANGLE_STRIP_ADJACENCY:
+		return "GL_TRIANGLE_STRIP_ADJACENCY";
+	case GL_PATCHES:
+		return "GL_PATCHES";
+	default:
+		return "(unrecognized enum)";
+	}
+}
