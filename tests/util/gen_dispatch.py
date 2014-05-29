@@ -112,9 +112,75 @@
 #   function corresponding to each entry in function_names.
 
 import collections
+import getopt
 import os.path
 import sys
 from xml.etree import ElementTree
+
+PROG_NAME = os.path.basename(sys.argv[0])
+
+def format_help():
+    """Return help message."""
+    help = (
+        'usage:\n'
+        '    {0} (-o OUT_DIR |--out-dir=OUT_DIR) (-x XML_FILE |--xml=XML_FILE)\n'
+    )
+    help = help.format(PROG_NAME)
+    return help
+
+
+def print_help(file=sys.stdout):
+    file.write(format_help())
+
+
+def usage_error(message):
+    """Print usage error message and exit."""
+    sys.stderr.write('usage error: {0}\n\n'.format(message))
+    print_help(file=sys.stderr)
+    sys.exit(2)
+
+
+def parse_args(args):
+    """Return (out_dir, xml_file)."""
+
+    out_dir = None
+    xml_file = None
+
+    try:
+        args = args[1:]
+        (opts, args) = getopt.getopt(args, 'ho:x:', ['help', 'out-dir=', 'xml='])
+    except getopt.GetoptError as err:
+        usage_error(err)
+
+    for (name, value) in opts:
+        if name in ('-h', '--help'):
+            print_help()
+            sys.exit(0)
+        elif name in ('-o', '--out-dir'):
+            out_dir = value
+        elif name in ('-x', '--xml'):
+            xml_file = value
+        else:
+            assert(False)
+
+    if len(args) > 0:
+        usage_error('unknown argument: {0!r}'.format(args[0]))
+    if out_dir is None:
+        usage_error('missing OUT_DIR')
+    if xml_file is None:
+        usage_error('missing XML_FILE')
+
+    return (out_dir, xml_file)
+
+
+def main(args):
+    (out_dir, xml_file) = parse_args(args)
+    api = read_api(xml_file)
+    c_contents, h_contents = generate_code(api)
+    with open(os.path.join(out_dir, 'generated_dispatch.c'), 'w') as f:
+        f.write(c_contents)
+    with open(os.path.join(out_dir, 'generated_dispatch.h'), 'w') as f:
+        f.write(h_contents)
 
 
 # Generate a top-of-file comment cautioning that the file is
@@ -149,7 +215,7 @@ def generated_boilerplate():
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-""".format(os.path.basename(sys.argv[0]))
+""".format(os.path.basename(PROG_NAME))
 
 
 # Certain param names used in OpenGL are reserved by some compilers.
@@ -725,11 +791,4 @@ def generate_code(api):
 
 
 if __name__ == '__main__':
-    file_to_parse = sys.argv[1]
-    api = read_api(file_to_parse)
-
-    c_contents, h_contents = generate_code(api)
-    with open(sys.argv[2], 'w') as f:
-        f.write(c_contents)
-    with open(sys.argv[3], 'w') as f:
-        f.write(h_contents)
+    main(sys.argv)
