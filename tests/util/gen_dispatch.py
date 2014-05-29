@@ -176,11 +176,13 @@ def parse_args(args):
 def main(args):
     (out_dir, xml_file) = parse_args(args)
     api = read_api(xml_file)
-    dispatch_c, dispatch_h = generate_code(api)
+    dispatch_c, dispatch_h, enum_c = generate_code(api)
     with open(os.path.join(out_dir, 'generated_dispatch.c'), 'w') as f:
         f.write(dispatch_c)
     with open(os.path.join(out_dir, 'generated_dispatch.h'), 'w') as f:
         f.write(dispatch_h)
+    with open(os.path.join(out_dir, 'piglit-util-gl-enum-gen.c'), 'w') as f:
+        f.write(enum_c)
 
 
 # Generate a top-of-file comment cautioning that the file is
@@ -216,6 +218,23 @@ def generated_boilerplate():
  * IN THE SOFTWARE.
  */
 """.format(os.path.basename(PROG_NAME))
+
+
+ENUM_C_HEAD = """
+#include "generated_dispatch.h"
+
+const char *
+piglit_get_gl_enum_name(GLenum param)
+{
+	switch (param) {
+"""
+
+
+ENUM_C_TAIL = """\
+	default: return "(unrecognized enum)";
+	}
+}
+"""
 
 
 # Certain param names used in OpenGL are reserved by some compilers.
@@ -719,8 +738,13 @@ def generate_function_names_and_resolvers(dispatch_sets):
 
 # Generate the C source and header files for the API.
 def generate_code(api):
+    """Return (dispatch_c dispatch_h, enum_c)."""
+
     dispatch_c = [generated_boilerplate()]
     dispatch_h = [generated_boilerplate()]
+
+    enum_c = [generated_boilerplate()]
+    enum_c.append(ENUM_C_HEAD)
 
     unique_functions = api.compute_unique_functions()
 
@@ -775,6 +799,7 @@ def generate_code(api):
     # Emit enum #defines
     for name, value in api.compute_unique_enums():
         dispatch_h.append('#define {0} {1}\n'.format(name, value))
+        enum_c.append('\tcase {0}: return "{0}"; // {1}\n'.format(name, value))
 
     # Emit extension #defines
     dispatch_h.append('\n')
@@ -787,7 +812,9 @@ def generate_code(api):
         dispatch_h.append('#define GL_VERSION_{0}_{1} 1\n'.format(
             ver // 10, ver % 10))
 
-    return ''.join(dispatch_c), ''.join(dispatch_h)
+    enum_c.append(ENUM_C_TAIL)
+
+    return ''.join(dispatch_c), ''.join(dispatch_h), ''.join(enum_c)
 
 
 if __name__ == '__main__':

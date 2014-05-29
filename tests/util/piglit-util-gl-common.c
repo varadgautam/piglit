@@ -22,6 +22,7 @@
  */
 
 #include "piglit-util-gl-common.h"
+#include "piglit-util-gl-enum-gen.c"
 #include <ctype.h>
 
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
