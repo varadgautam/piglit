@@ -176,11 +176,11 @@ def parse_args(args):
 def main(args):
     (out_dir, xml_file) = parse_args(args)
     api = read_api(xml_file)
-    c_contents, h_contents = generate_code(api)
+    dispatch_c, dispatch_h = generate_code(api)
     with open(os.path.join(out_dir, 'generated_dispatch.c'), 'w') as f:
-        f.write(c_contents)
+        f.write(dispatch_c)
     with open(os.path.join(out_dir, 'generated_dispatch.h'), 'w') as f:
-        f.write(h_contents)
+        f.write(dispatch_h)
 
 
 # Generate a top-of-file comment cautioning that the file is
@@ -719,14 +719,14 @@ def generate_function_names_and_resolvers(dispatch_sets):
 
 # Generate the C source and header files for the API.
 def generate_code(api):
-    c_contents = [generated_boilerplate()]
-    h_contents = [generated_boilerplate()]
+    dispatch_c = [generated_boilerplate()]
+    dispatch_h = [generated_boilerplate()]
 
     unique_functions = api.compute_unique_functions()
 
     # Emit typedefs for each name
     for f in unique_functions:
-        h_contents.append(
+        dispatch_h.append(
             'typedef {0};\n'.format(
                 f.c_form('(APIENTRY *{0})'.format(f.typedef_name),
                          anonymous_args=True)))
@@ -740,54 +740,54 @@ def generate_code(api):
         comments = '\n'
         for cat, f in ds.cat_fn_pairs:
             comments += '/* {0} ({1}) */\n'.format(f.gl_name, cat)
-        c_contents.append(comments)
-        h_contents.append(comments)
+        dispatch_c.append(comments)
+        dispatch_h.append(comments)
 
         # Emit extern declaration of dispatch pointer
-        h_contents.append(
+        dispatch_h.append(
             'extern {0} {1};\n'.format(f0.typedef_name, ds.dispatch_name))
 
         # Emit defines aliasing each GL function to the dispatch
         # pointer
         for _, f in ds.cat_fn_pairs:
-            h_contents.append(
+            dispatch_h.append(
                 '#define {0} {1}\n'.format(f.gl_name, ds.dispatch_name))
 
         # Emit resolve function
-        c_contents.append(generate_resolve_function(ds))
+        dispatch_c.append(generate_resolve_function(ds))
 
         # Emit stub function
-        c_contents.append(generate_stub_function(ds))
+        dispatch_c.append(generate_stub_function(ds))
 
         # Emit initializer for dispatch pointer
-        c_contents.append(
+        dispatch_c.append(
             '{0} {1} = {2};\n'.format(
                 f0.typedef_name, ds.dispatch_name, ds.stub_name))
 
     # Emit dispatch pointer initialization function
-    c_contents.append(generate_dispatch_pointer_resetter(dispatch_sets))
+    dispatch_c.append(generate_dispatch_pointer_resetter(dispatch_sets))
 
-    c_contents.append('\n')
+    dispatch_c.append('\n')
 
     # Emit function_names and function_resolvers tables.
-    c_contents.append(generate_function_names_and_resolvers(dispatch_sets))
+    dispatch_c.append(generate_function_names_and_resolvers(dispatch_sets))
 
     # Emit enum #defines
     for name, value in api.compute_unique_enums():
-        h_contents.append('#define {0} {1}\n'.format(name, value))
+        dispatch_h.append('#define {0} {1}\n'.format(name, value))
 
     # Emit extension #defines
-    h_contents.append('\n')
+    dispatch_h.append('\n')
     for ext in api.extensions:
-        h_contents.append('#define {0} 1\n'.format(ext))
+        dispatch_h.append('#define {0} 1\n'.format(ext))
 
     # Emit GL version #defines
-    h_contents.append('\n')
+    dispatch_h.append('\n')
     for ver in api.gl_versions:
-        h_contents.append('#define GL_VERSION_{0}_{1} 1\n'.format(
+        dispatch_h.append('#define GL_VERSION_{0}_{1} 1\n'.format(
             ver // 10, ver % 10))
 
-    return ''.join(c_contents), ''.join(h_contents)
+    return ''.join(dispatch_c), ''.join(dispatch_h)
 
 
 if __name__ == '__main__':
