@@ -65,6 +65,7 @@ def main():
 
     gl_registry = registry.gl.parse()
     DispatchCode(gl_registry).emit(args.out_dir)
+    EnumCode(gl_registry).emit(args.out_dir)
 
 
 warning = 'DO NOT EDIT! A script generated this file.'
@@ -75,7 +76,6 @@ def render_template(template_name, template_vars, out_dir):
     fake_tab = re.compile(r'>-------')
 
     def fake_whitespace(proto_text):
-        debug = True
         if debug:
             print('fake whitespace: before: {0!r}'.format(proto_text))
         text = unicode(proto_text)
@@ -127,6 +127,58 @@ class DispatchCode(object):
 
         render_template(self.H_TEMPLATE, template_vars, out_dir)
         render_template(self.C_TEMPLATE, template_vars, out_dir)
+
+
+class EnumCode(object):
+
+    C_TEMPLATE = 'piglit-util-gl-enum-gen.c.template'
+
+    def __init__(self, gl_registry):
+        assert(isinstance(gl_registry, registry.gl.Registry))
+        self.gl_registry = gl_registry
+        self.unique_default_namespace_enums = None
+        self.__gather_unique_default_namespace_enums()
+
+    def emit(self, out_dir):
+        template_vars = dict(
+            warning=warning,
+            gl_registry=self.gl_registry,
+            unique_default_namespace_enums=self.unique_default_namespace_enums,
+        )
+        render_template(self.C_TEMPLATE, template_vars, out_dir)
+
+
+    def __gather_unique_default_namespace_enums(self):
+        duplicate_enums = [
+            enum
+            for enum_group in self.gl_registry.enum_groups
+            if enum_group.type == 'default_namespace'
+            for enum in enum_group.enums
+        ]
+
+        # Sort enums by numerical value then by name. This ensures that
+        # non-suffixed variants of an enum name precede the suffixed variant.
+        # For example, GL_RED will precede GL_RED_EXT.
+        def enum_cmp(x, y):
+            c = cmp(x.num_value, y.num_value)
+            if c != 0:
+                return c
+            c = cmp(x.name, y.name)
+            if c != 0:
+                return c
+            return 0
+
+        duplicate_enums.sort(enum_cmp)
+
+        # Copy duplicate_enums into unique_enums, filtering out duplicate
+        # values. The algorithm requires that dupliate_enums be sorted by
+        # value.
+        unique_enums = [duplicate_enums[0]]
+        for enum in duplicate_enums[1:]:
+            if enum.num_value > unique_enums[-1].num_value:
+                unique_enums.append(enum)
+
+        self.unique_default_namespace_enums = unique_enums
 
 
 if __name__ == '__main__':

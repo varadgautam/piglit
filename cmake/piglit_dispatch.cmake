@@ -27,6 +27,7 @@ file(MAKE_DIRECTORY ${piglit_dispatch_gen_output_dir})
 set(piglit_dispatch_gen_outputs
 	${piglit_dispatch_gen_output_dir}/piglit-dispatch-gen.c
 	${piglit_dispatch_gen_output_dir}/piglit-dispatch-gen.h
+	${piglit_dispatch_gen_output_dir}/piglit-util-gl-enum-gen.c
 	)
 
 set(piglit_dispatch_gen_inputs
