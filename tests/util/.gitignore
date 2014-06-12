@@ -1,3 +1,4 @@
 config.h
 generated_dispatch.c
 generated_dispatch.h
+piglit-util-gl-enum-gen.c
