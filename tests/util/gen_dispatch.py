@@ -57,8 +57,8 @@ def main():
     registry.gl.debug = debug
     gl_registry = registry.gl.parse()
 
-    dispatch_h = open(os.path.join(args.out_dir, 'generated_dispatch.h'), 'w')
-    dispatch_c = open(os.path.join(args.out_dir, 'generated_dispatch.c'), 'w')
+    dispatch_h = open(os.path.join(args.out_dir, 'piglit-dispatch-gen.h'), 'w')
+    dispatch_c = open(os.path.join(args.out_dir, 'piglit-dispatch-gen.c'), 'w')
     DispatchCode(gl_registry).emit(dispatch_h, dispatch_c)
     dispatch_h.close()
     dispatch_c.close()
