@@ -63,6 +63,10 @@ def main():
     dispatch_h.close()
     dispatch_c.close()
 
+    enum_c = open(os.path.join(args.out_dir, 'piglit-util-gl-enum-gen.c'), 'w')
+    EnumCode(gl_registry).emit(enum_c)
+    enum_c.close()
+
 def log_debug(msg):
     if debug:
         sys.stderr.write('debug: {0}: {1}\n'.format(PROG_NAME, msg))
@@ -303,6 +307,84 @@ class DispatchCode(object):
                     copyright=copyright_block,
             )
             template.render_context(ctx)
+
+class EnumCode(object):
+
+    c_template = Template(dedent('''\
+        ${copyright}
+
+        #include "piglit-util-gl-common.h"
+
+        const char*
+        piglit_get_gl_enum_name(GLenum param)
+        {
+            switch (param) {
+        % for enum in unique_default_namespace_enums:
+            case ${enum.c_num_literal}: return "${enum.name}";
+        % endfor
+            default: return "(unrecognized enum)";
+            }
+        }
+
+        const char*
+        piglit_get_prim_name(GLenum prim)
+        {
+        <% gl_patches = gl_registry.enums['GL_PATCHES'] %>\\
+            switch (prim) {
+        % for enum in unique_default_namespace_enums:
+        %     if enum.num_value <= gl_patches.num_value:
+            case ${enum.c_num_literal}: return "${enum.name}";
+        %     endif
+        % endfor
+            default: return "(unrecognized enum)";
+            }
+        }'''
+    ))
+
+    def __init__(self, gl_registry):
+        self.gl_registry = gl_registry
+        self.unique_default_namespace_enums = None
+        self.__gather_unique_default_namespace_enums()
+
+    def __gather_unique_default_namespace_enums(self):
+        duplicate_enums = [
+            enum
+            for enum_group in self.gl_registry.enum_groups
+            if enum_group.type == 'default_namespace'
+            for enum in enum_group.enums
+            if not enum.is_collider
+        ]
+
+        # Sort enums by numerical value then by name. This ensures that
+        # non-suffixed variants of an enum name precede the suffixed variant.
+        # For example, GL_RED will precede GL_RED_EXT.
+        def enum_cmp(x, y):
+            c = cmp(x.num_value, y.num_value)
+            if c != 0: return c
+            c = cmp(x.name, y.name)
+            if c != 0: return c
+            return 0
+
+        duplicate_enums.sort(enum_cmp)
+
+        # Copy duplicate_enums into unique_enums, filtering out duplicate
+        # values. The algorithm requires that dupliate_enums be sorted by
+        # value.
+        unique_enums = [duplicate_enums[0]]
+        for enum in duplicate_enums[1:]:
+            if enum.num_value > unique_enums[-1].num_value:
+                unique_enums.append(enum)
+
+        self.unique_default_namespace_enums = unique_enums
+
+    def emit(self, c_buf):
+        ctx = mako.runtime.Context(
+            buffer=c_buf,
+            copyright=copyright_block,
+            gl_registry=self.gl_registry,
+            unique_default_namespace_enums=self.unique_default_namespace_enums,
+        )
+        EnumCode.c_template.render_context(ctx)
 
 if __name__ == '__main__':
     main()
