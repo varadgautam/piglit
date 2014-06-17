@@ -27,7 +27,6 @@ import os.path
 import re
 import sys
 import xml.etree.cElementTree as ElementTree
-from collections import namedtuple, OrderedDict
 from textwrap import dedent
 
 # Export 'debug' so other Piglit modules can easily enable it.
@@ -94,9 +93,11 @@ class OrderedKeyedSet(object):
         else:
             self.__key_func = key
 
-        self.__dict = OrderedDict()
-        for i in elems:
-            self.add(i)
+        self.__key_list = []
+        self.__dict = dict()
+
+        for e in elems:
+            self.add(e)
 
     def __or__(x, y):
         """Same as `union`."""
@@ -106,7 +107,8 @@ class OrderedKeyedSet(object):
         return key in self.__dict
 
     def __delitem__(self, key):
-        del self.__dict[key]
+        self.pop(key)
+        return None
 
     def __getitem__(self, key):
         return self.__dict[key]
@@ -115,22 +117,27 @@ class OrderedKeyedSet(object):
         return self.__dict.itervalues()
 
     def __len__(self):
-        return len(self.__dict)
+        return len(self.__key_list)
 
     def __repr__(self):
-        return '{0}({1})'.format(self.__class__.__name__, list(self.iterkeys()))
+        return '{0}({1})'.format(self.__class__.__name__, self.__key_list)
 
     def copy(self):
         """Return shallow copy."""
         other = OrderedKeyedSet(key=self.__key_func)
+        other.__key_list = [k for k in self.__key_list]
         other.__dict = self.__dict.copy()
         return other
 
     def add(self, x):
-        self.__dict[self.__key_func(x)] = x
+        key = self.__key_func(x)
+        if key not in self.__dict:
+            self.__key_list.append(key)
+        self.__dict[key] = x
 
     def clear(self):
-        self.__dict.clear()
+        self.__key_list = []
+        self.__dict = dict()
 
     def extend(self, elems):
         for e in elems:
@@ -143,22 +150,30 @@ class OrderedKeyedSet(object):
         return self.__key_func(x)
 
     def iteritems(self, x):
-        return self.__dict.iteritems()
+        for key in self.__key_list:
+            yield (key, self.__dict[key])
 
     def iterkeys(self):
-        return self.__dict.iterkeys()
+        return iter(self.__key_list)
 
     def itervalues(self):
-        return self.__dict.itervalues()
+        for key in self.__key_list:
+            yield self.__dict[key]
 
     def pop(self, key):
-        return self.__dict.pop(key)
+        # This function should raise Exceptions similar to dict.pop, so call
+        # dict.pop first.
+        value = self.__dict.pop(key)
+        self.__key_list.remove(key)
+        return value
 
     def sort_by_key(self):
-        self.__dict = OrderedDict(sorted(self.items(), key=lambda i: i[0]))
+        self.__key_list.sort()
 
     def sort_by_value(self):
-        self.__dict = OrderedDict(sorted(self.items(), key=lambda i: i[1]))
+        def cmp(key1, key2):
+            return cmp(self.__dict[key1], self.__dict[key2])
+        self.__key_list.sort(cmp=cmp)
 
     def union(self, other):
         """Return the union of two sets as a new set.
