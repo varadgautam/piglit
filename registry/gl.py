@@ -26,7 +26,7 @@ Parse gl.xml into Python objects.
 import os.path
 import re
 import sys
-import xml.etree.ElementTree as ElementTree
+import xml.etree.cElementTree as ElementTree
 from collections import namedtuple, OrderedDict
 from textwrap import dedent
 
