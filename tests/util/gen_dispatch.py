@@ -109,10 +109,10 @@ apis = OrderedKeyedSet(
 
 class CommandAliasMap(OrderedKeyedSet):
 
-    unaliasable_commands = {
+    unaliasable_commands = [
         'glGetObjectParameterivAPPLE',
         'glGetObjectParameterivARB',
-    }
+    ]
 
     def __init__(self, commands=()):
         OrderedKeyedSet.__init__(self, key='name', elems=commands)
