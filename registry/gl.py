@@ -253,11 +253,11 @@ class Registry(object):
             )
         )
 
-        self.vendor_namespaces = {
+        self.vendor_namespaces = set(
             extension.vendor_namespace
             for extension in self.extensions
             if extension.vendor_namespace is not None
-        }
+        )
 
         for feature in self.features:
             feature._link_commands(self.commands)
