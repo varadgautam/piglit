@@ -38,6 +38,23 @@
 
 GLint piglit_ARBfp_pass_through = 0;
 
+static size_t
+piglit_get_gl_type_size(GLenum type)
+{
+	switch (type) {
+	case GL_BYTE:
+	case GL_UNSIGNED_BYTE:
+		return 1;
+	case GL_FLOAT:
+	case GL_INT:
+	case GL_UNSIGNED_INT:
+		return 4;
+	default:
+		assert(0);
+		return 0;
+	}
+}
+
 static void
 piglit_pixel_println(const char *tag, GLenum format, GLenum type, 
 		     const void *pixel)
@@ -66,10 +83,33 @@ piglit_pixel_println(const char *tag, GLenum format, GLenum type,
 	printf("\n");
 }
 
+static void
+piglit_pixel_print_mismatch(int x, int y,
+			    GLenum format, GLenum type,
+			    const void *actual_pixel,
+			    const void *expect_pixel)
+{
+	const char *flavor = NULL;
+
+	switch (format) {
+	case GL_RGB:
+	case GL_RGBA:
+		flavor = "color";
+		break;
+	default:
+		assert(false);
+		break;
+	}
+
+	printf("Probe %s at (%d, %d)\n", flavor, x, y);
+	piglit_pixel_println("  Expected:", format, type, expect_pixel);
+	piglit_pixel_println("  Observed:", format, type, actual_pixel);
+}
+
 static bool
 piglit_pixel_eq(GLenum format, GLenum type,
 		const void *actual_pixel,
-		const void *expected_pixel,
+		const void *expect_pixel,
 		const float *tolerance)
 {
 	const size_t num_components = piglit_num_components(format);
@@ -80,10 +120,10 @@ piglit_pixel_eq(GLenum format, GLenum type,
 
 		switch (type) {
 			case GL_FLOAT:
-				diff = ((float*)actual_pixel)[c] - ((float*)expected_pixel)[c];
+				diff = ((float*)actual_pixel)[c] - ((float*)expect_pixel)[c];
 				break;
 			case GL_INT:
-				diff = ((int*)actual_pixel)[c] - ((int*)expected_pixel)[c];
+				diff = ((int*)actual_pixel)[c] - ((int*)expect_pixel)[c];
 				break;
 			default:
 				assert(false);
@@ -98,54 +138,19 @@ piglit_pixel_eq(GLenum format, GLenum type,
 	return true;
 }
 
-static void
-piglit_pixel_print_mismatch(int x, int y,
-		GLenum format, GLenum type,
-		const void *actual_pixel,
-		const void *expected_pixel)
-
-		printf("Probe %s at (%d,%d)\n", pixel_flavor, x, y);
-		piglit_pixel_println("  Expected:", type, num_components, expected_pixel);
-		piglit_pixel_println("  Observed:", type, num_components, actual_pixel);
-
 static bool
 piglit_pixel_compare(int x, int y,
 		     GLenum format, GLenum type,
-		     const void *actual_pixel,
-		     const void *expected_pixel,
+		     const void *actual, const void *expect,
 		     const float *tolerance,
 		     bool silent)
 {
-	bool pass = piglit_pixel_eq(format, type,
-			            actual_pixel, expected_pixel, tolerance);
+	bool pass = true;
 
-	const size_t num_components = piglit_num_components(format);
-	bool pass;
-	size_t c;
-
-	for (c = 0; c < num_components; ++c) {
-		float diff = 0;
-
-		switch (type) {
-			case GL_FLOAT:
-				diff = ((float*)actual_pixel)[c] - ((float*)expected_pixel)[c];
-				break;
-			case GL_INT:
-				diff = ((int*)actual_pixel)[c] - ((int*)expected_pixel)[c];
-				break;
-			default:
-				assert(false);
-				break;
-		}
-
-		if (fabs(diff) >= tolerance[c]) {
-			pass = false;
-			break;
-		}
-	}
-
+	pass = piglit_pixel_eq(format, type, actual, expect, tolerance);
 	if (!pass && !silent) {
-		piglit_print_pixel_mismatch(x, y, format, type, 
+		piglit_pixel_print_mismatch(x, y, format, type,
+					    actual, expect);
 	}
 
 	return pass;
@@ -155,7 +160,7 @@ static bool
 piglit_probe_pixel_rect_priv(int x, int y, int w, int h,
 		             GLenum format, GLenum type,
 			     const void *expect_pixel,
-			     void *out_actual_pixels,
+			     void *out_actual_rect,
 			     const float *tolerance,
 			     bool silent)
 {
@@ -164,23 +169,25 @@ piglit_probe_pixel_rect_priv(int x, int y, int w, int h,
 	size_t type_size = 0;
 	size_t pixel_size = 0;
 	size_t rect_size = 0;
-	void *actual_pixels = NULL;
+	void *actual_rect = NULL;
+	int i, j;
 
 	type_size = piglit_get_gl_type_size(type);
 	pixel_size = type_size * piglit_num_components(format);
 	rect_size = num_pixels * pixel_size;
 
-	actual_pixels = malloc(rect_size);
-	glReadPixels(x, y, w, h, format, type, actual_pixels);
+	actual_rect = malloc(rect_size);
+	glReadPixels(x, y, w, h, format, type, actual_rect);
 
-	if (out_actual_pixels) {
-		memcpy(out_actual_pixels, actual_pixels, rect_size);
+	if (out_actual_rect) {
+		memcpy(out_actual_rect, actual_rect, rect_size);
 	}
 
 	for (j = 0; j < h; ++j) {
 		for (i = 0; i < w; ++i) {
-			const void *actual_pixel = &actual_pixels[pixel_size * (j * w + i)];
-			pass = piglit_compare_color_pixel(
+			const void *actual_pixel = actual_rect
+				                 + (pixel_size * (j * w + i));
+			pass = piglit_pixel_compare(
 					x + i, y + i,
 					format, type,
 					actual_pixel, expect_pixel,
@@ -193,7 +200,7 @@ piglit_probe_pixel_rect_priv(int x, int y, int w, int h,
 	}
 
 done:
-	free(actual_pixels);
+	free(actual_rect);
 	return pass;
 }
 
@@ -334,26 +341,11 @@ piglit_get_luminance_intensity_bits(GLenum internalformat, int *bits)
  */
 int piglit_probe_pixel_rgba(int x, int y, const float* expected)
 {
-	GLfloat probe[4];
-	int i;
-	GLboolean pass = GL_TRUE;
-
-	glReadPixels(x, y, 1, 1, GL_RGBA, GL_FLOAT, probe);
-
-	for(i = 0; i < 4; ++i) {
-		if (fabs(probe[i] - expected[i]) > piglit_tolerance[i]) {
-			pass = GL_FALSE;
-		}
-	}
-
-	if (pass)
-		return 1;
-
-	printf("Probe color at (%i,%i)\n", x, y);
-	printf("  Expected: %f %f %f %f\n", expected[0], expected[1], expected[2], expected[3]);
-	printf("  Observed: %f %f %f %f\n", probe[0], probe[1], probe[2], probe[3]);
-
-	return 0;
+	return piglit_probe_pixel_rect_priv(
+			x, y, 1, 1,
+			GL_RGBA, GL_FLOAT,
+			expected, NULL, piglit_tolerance,
+			/*silent*/ false);
 }
 
 int piglit_probe_pixel_rgb_silent(int x, int y, const float* expected, float *out_probe)
