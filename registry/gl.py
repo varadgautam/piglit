@@ -118,7 +118,7 @@ class OrderedKeyedSet(object):
         return len(self.__dict)
 
     def __repr__(self):
-        return '{0}({1})'.format(self.__class__.__name__, list(self.keys()))
+        return '{0}({1})'.format(self.__class__.__name__, list(self.iterkeys()))
 
     def copy(self):
         """Return shallow copy."""
@@ -142,13 +142,13 @@ class OrderedKeyedSet(object):
     def get_key(self, x):
         return self.__key_func(x)
 
-    def items(self, x):
+    def iteritems(self, x):
         return self.__dict.iteritems()
 
-    def keys(self):
+    def iterkeys(self):
         return self.__dict.iterkeys()
 
-    def values(self):
+    def itervalues(self):
         return self.__dict.itervalues()
 
     def pop(self, key):
