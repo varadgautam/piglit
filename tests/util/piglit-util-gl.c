@@ -69,11 +69,13 @@ piglit_pixel_println(const char *tag, GLenum format, GLenum type,
 	for (c = 0; c < num_components; ++c) {
 		switch (type) {
 			case GL_FLOAT:
-				printf(" %f", ((float*)pixel)[c]);
+				printf(" %f", ((GLfloat*)pixel)[c]);
 				break;
 			case GL_INT:
-				printf(" %d", ((int*)pixel)[c]);
+				printf(" %d", ((GLint*)pixel)[c]);
 				break;
+			case GL_UNSIGNED_INT:
+				printf(" %u", ((GLuint*)pixel)[c]);
 			default:
 				assert(false);
 				break;
@@ -120,10 +122,13 @@ piglit_pixel_eq(GLenum format, GLenum type,
 
 		switch (type) {
 			case GL_FLOAT:
-				diff = ((float*)actual_pixel)[c] - ((float*)expect_pixel)[c];
+				diff = ((GLfloat*)actual_pixel)[c] - ((GLfloat*)expect_pixel)[c];
 				break;
 			case GL_INT:
-				diff = ((int*)actual_pixel)[c] - ((int*)expect_pixel)[c];
+				diff = ((GLint*)actual_pixel)[c] - ((GLint*)expect_pixel)[c];
+				break;
+			case GL_UNSIGNED_INT:
+				diff = ((GLuint*)actual_pixel)[c] - ((GLuint*)expect_pixel)[c];
 				break;
 			default:
 				assert(false);
@@ -219,8 +224,10 @@ piglit_num_components(GLenum base_format)
 	case GL_RG:
 		return 2;
 	case GL_RGB:
+	case GL_RGB_INTEGER:
 		return 3;
 	case GL_RGBA:
+	case GL_RGBA_INTEGER:
 		return 4;
 	default:
 		printf("Unknown num_components for %s\n",
@@ -350,139 +357,51 @@ int piglit_probe_pixel_rgba(int x, int y, const float* expected)
 
 int piglit_probe_pixel_rgb_silent(int x, int y, const float* expected, float *out_probe)
 {
-	GLfloat probe[3];
-	int i;
-	GLboolean pass = GL_TRUE;
-
-	glReadPixels(x, y, 1, 1, GL_RGB, GL_FLOAT, probe);
-
-	for(i = 0; i < 3; ++i) {
-		if (fabs(probe[i] - expected[i]) > piglit_tolerance[i]) {
-			pass = GL_FALSE;
-		}
-	}
-
-	if (out_probe)
-		memcpy(out_probe, probe, sizeof(probe));
-
-	return pass;
+	return piglit_probe_pixel_rect_priv(
+			x, y, 1, 1,
+			GL_RGB, GL_FLOAT,
+			expected, out_probe, piglit_tolerance,
+			/*silent*/ true);
 }
 
 int piglit_probe_pixel_rgba_silent(int x, int y, const float* expected, float *out_probe)
 {
-	GLfloat probe[4];
-	int i;
-	GLboolean pass = GL_TRUE;
-
-	glReadPixels(x, y, 1, 1, GL_RGBA, GL_FLOAT, probe);
-
-	for(i = 0; i < 4; ++i) {
-		if (fabs(probe[i] - expected[i]) > piglit_tolerance[i]) {
-			pass = GL_FALSE;
-		}
-	}
-
-	if (out_probe)
-		memcpy(out_probe, probe, sizeof(probe));
-
-	return pass;
+	return piglit_probe_pixel_rect_priv(
+			x, y, 1, 1,
+			GL_RGBA, GL_FLOAT,
+			expected, out_probe, piglit_tolerance,
+			/*silent*/ true);
 }
 
 int
 piglit_probe_rect_rgba(int x, int y, int w, int h, const float *expected)
 {
-	int i, j, p;
-	GLfloat *probe;
-	GLfloat *pixels = malloc(w*h*4*sizeof(float));
-
-	glReadPixels(x, y, w, h, GL_RGBA, GL_FLOAT, pixels);
-
-	for (j = 0; j < h; j++) {
-		for (i = 0; i < w; i++) {
-			probe = &pixels[(j*w+i)*4];
-
-			for (p = 0; p < 4; ++p) {
-				if (fabs(probe[p] - expected[p]) >= piglit_tolerance[p]) {
-					printf("Probe color at (%i,%i)\n", x+i, y+j);
-					printf("  Expected: %f %f %f %f\n",
-					       expected[0], expected[1], expected[2], expected[3]);
-					printf("  Observed: %f %f %f %f\n",
-					       probe[0], probe[1], probe[2], probe[3]);
-
-					free(pixels);
-					return 0;
-				}
-			}
-		}
-	}
-
-	free(pixels);
-	return 1;
+	return piglit_probe_pixel_rect_priv(
+			x, y, w, h,
+			GL_RGBA, GL_FLOAT,
+			expected, NULL, piglit_tolerance,
+			/*silent*/ false);
 }
 
 int
 piglit_probe_rect_rgba_int(int x, int y, int w, int h, const int *expected)
 {
-	int i, j, p;
-	GLint *probe;
-	GLint *pixels = malloc(w*h*4*sizeof(int));
-
-	glReadPixels(x, y, w, h, GL_RGBA_INTEGER, GL_INT, pixels);
-
-	for (j = 0; j < h; j++) {
-		for (i = 0; i < w; i++) {
-			probe = &pixels[(j*w+i)*4];
-
-			for (p = 0; p < 4; ++p) {
-				if (fabs(probe[p] - expected[p]) >= piglit_tolerance[p]) {
-					printf("Probe color at (%d,%d)\n", x+i, y+j);
-					printf("  Expected: %d %d %d %d\n",
-					       expected[0], expected[1], expected[2], expected[3]);
-					printf("  Observed: %d %d %d %d\n",
-					       probe[0], probe[1], probe[2], probe[3]);
-
-					free(pixels);
-					return 0;
-				}
-			}
-		}
-	}
-
-	free(pixels);
-	return 1;
+	return piglit_probe_pixel_rect_priv(
+			x, y, w, h,
+			GL_RGBA, GL_INT,
+			expected, NULL, piglit_tolerance,
+			/*silent*/ false);
 }
 
 int
 piglit_probe_rect_rgba_uint(int x, int y, int w, int h,
 			    const unsigned int *expected)
 {
-	int i, j, p;
-	GLuint *probe;
-	GLuint *pixels = malloc(w*h*4*sizeof(unsigned int));
-
-	glReadPixels(x, y, w, h, GL_RGBA_INTEGER, GL_UNSIGNED_INT, pixels);
-
-	for (j = 0; j < h; j++) {
-		for (i = 0; i < w; i++) {
-			probe = &pixels[(j*w+i)*4];
-
-			for (p = 0; p < 4; ++p) {
-				if (fabs(probe[p] - expected[p]) >= piglit_tolerance[p]) {
-					printf("Probe color at (%d,%d)\n", x+i, y+j);
-					printf("  Expected: %u %u %u %u\n",
-					       expected[0], expected[1], expected[2], expected[3]);
-					printf("  Observed: %u %u %u %u\n",
-					       probe[0], probe[1], probe[2], probe[3]);
-
-					free(pixels);
-					return 0;
-				}
-			}
-		}
-	}
-
-	free(pixels);
-	return 1;
+	return piglit_probe_pixel_rect_priv(
+			x, y, w, h,
+			GL_RGBA_INTEGER, GL_UNSIGNED_INT,
+			expected, NULL, piglit_tolerance,
+			/*silent*/ false);
 }
 
 static void
@@ -521,95 +440,100 @@ piglit_compute_probe_tolerance(GLenum format, float *tolerance)
  * Compare two in-memory floating-point images.
  */
 int
-piglit_compare_images_color(int x, int y, int w, int h, int num_components,
-			    const float *tolerance,
-			    const float *expected_image,
-			    const float *observed_image)
+piglit_compare_images(int x, int y, int w, int h,
+		      GLenum format, GLenum type,
+		      const float *tolerance,
+		      const float *actual_image,
+		      const float *expected_image)
 {
-	int i, j, p;
-	for (j = 0; j < h; j++) {
-		for (i = 0; i < w; i++) {
-			const float *expected =
-				&expected_image[(j*w+i)*num_components];
-			const float *probe =
-				&observed_image[(j*w+i)*num_components];
-
-			for (p = 0; p < num_components; ++p) {
-				if (fabs(probe[p] - expected[p])
-				    >= tolerance[p]) {
-					printf("Probe at (%i,%i)\n", x+i, y+j);
-					printf("  Expected:");
-					print_pixel(expected, num_components);
-					printf("\n  Observed:");
-					print_pixel(probe, num_components);
-					printf("\n");
-
-					return 0;
-				}
-			}
-		}
-	}
-
-	return 1;
+#error TODO
+//
+//	int i, j, p;
+//	for (j = 0; j < h; j++) {
+//		for (i = 0; i < w; i++) {
+//			const float *expected =
+//				&expected_image[(j*w+i)*num_components];
+//			const float *probe =
+//				&observed_image[(j*w+i)*num_components];
+//
+//			for (p = 0; p < num_components; ++p) {
+//				if (fabs(probe[p] - expected[p])
+//				    >= tolerance[p]) {
+//					printf("Probe at (%i,%i)\n", x+i, y+j);
+//					printf("  Expected:");
+//					print_pixel(expected, num_components);
+//					printf("\n  Observed:");
+//					print_pixel(probe, num_components);
+//					printf("\n");
+//
+//					return 0;
+//				}
+//			}
+//		}
+//	}
+//
+//	return 1;
 }
 
-/**
- * Compare two in-memory unsigned-byte images.
- */
-int
-piglit_compare_images_ubyte(int x, int y, int w, int h,
-			    const GLubyte *expected_image,
-			    const GLubyte *observed_image)
-{
-	int i, j;
-	for (j = 0; j < h; j++) {
-		for (i = 0; i < w; i++) {
-			const GLubyte expected = expected_image[j*w+i];
-			const GLubyte probe = observed_image[j*w+i];
+#error TODO
+///**
+// * Compare two in-memory unsigned-byte images.
+// */
+//int
+//piglit_compare_images_ubyte(int x, int y, int w, int h,
+//			    const GLubyte *expected_image,
+//			    const GLubyte *observed_image)
+//{
+//	int i, j;
+//	for (j = 0; j < h; j++) {
+//		for (i = 0; i < w; i++) {
+//			const GLubyte expected = expected_image[j*w+i];
+//			const GLubyte probe = observed_image[j*w+i];
+//
+//			if (probe != expected) {
+//				printf("Probe at (%i,%i)\n", x+i, y+j);
+//				printf("  Expected: %d\n", expected);
+//				printf("  Observed: %d\n", probe);
+//
+//				return 0;
+//			}
+//		}
+//	}
+//
+//	return 1;
+//}
 
-			if (probe != expected) {
-				printf("Probe at (%i,%i)\n", x+i, y+j);
-				printf("  Expected: %d\n", expected);
-				printf("  Observed: %d\n", probe);
-
-				return 0;
-			}
-		}
-	}
-
-	return 1;
-}
-
-/**
- * Compare the contents of the current read framebuffer with the given
- * in-memory floating-point image.
- */
-int
-piglit_probe_image_color(int x, int y, int w, int h, GLenum format,
-			 const float *image)
-{
-	int c = piglit_num_components(format);
-	GLfloat *pixels = malloc(w*h*c*sizeof(float));
-	float tolerance[4];
-	int result;
-
-	piglit_compute_probe_tolerance(format, tolerance);
-
-	if (format == GL_INTENSITY) {
-		/* GL_INTENSITY is not allowed for ReadPixels so
-		 * substitute GL_LUMINANCE.
-		 */
-		format = GL_LUMINANCE;
-	}
-
-	glReadPixels(x, y, w, h, format, GL_FLOAT, pixels);
-
-	result = piglit_compare_images_color(x, y, w, h, c, tolerance, image,
-					     pixels);
-
-	free(pixels);
-	return result;
-}
+#error TODO
+///**
+// * Compare the contents of the current read framebuffer with the given
+// * in-memory floating-point image.
+// */
+//int
+//piglit_probe_image_color(int x, int y, int w, int h, GLenum format,
+//			 const float *image)
+//{
+//	int c = piglit_num_components(format);
+//	GLfloat *pixels = malloc(w*h*c*sizeof(float));
+//	float tolerance[4];
+//	int result;
+//
+//	piglit_compute_probe_tolerance(format, tolerance);
+//
+//	if (format == GL_INTENSITY) {
+//		/* GL_INTENSITY is not allowed for ReadPixels so
+//		 * substitute GL_LUMINANCE.
+//		 */
+//		format = GL_LUMINANCE;
+//	}
+//
+//	glReadPixels(x, y, w, h, format, GL_FLOAT, pixels);
+//
+//	result = piglit_compare_images_color(x, y, w, h, c, tolerance, image,
+//					     pixels);
+//
+//	free(pixels);
+//	return result;
+//}
 
 /**
  * Compare the contents of the current read framebuffer's stencil

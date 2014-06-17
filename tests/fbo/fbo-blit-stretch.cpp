@@ -201,7 +201,7 @@ static float clearColor[4] = {
 };
 
 static GLboolean
-verify(const TestCase &test, GLuint srcFBO, GLuint dstFBO, GLuint numChannels)
+verify(const TestCase &test, GLuint srcFBO, GLuint dstFBO)
 {
 	GLint srcX0 = test.srcX0;
 	GLint srcY0 = test.srcY0;
@@ -229,6 +229,7 @@ verify(const TestCase &test, GLuint srcFBO, GLuint dstFBO, GLuint numChannels)
 	GLint dstW = piglit_width;
 	GLint dstH = piglit_height;
 
+	const GLuint numChannels = piglit_num_components(GL_RGB);
 	float *srcPixels = new float[test.srcH * test.srcW * numChannels];
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, srcFBO);
@@ -303,10 +304,10 @@ verify(const TestCase &test, GLuint srcFBO, GLuint dstFBO, GLuint numChannels)
 	glReadPixels(0, 0, dstW, dstH, GL_RGB, GL_FLOAT, observedDstPixels);
 
 	GLboolean pass;
-	pass = piglit_compare_images_color(0, 0, dstW, dstH, numChannels,
-			                   piglit_tolerance,
-					   expectedDstPixels,
-					   observedDstPixels);
+	pass = piglit_compare_images(0, 0, dstW, dstH,
+			             GL_RGB, GL_FLOAT,
+			             piglit_tolerance,
+				     expectedDstPixels, observedDstPixels);
 
 	delete [] observedDstPixels;
 	delete [] expectedDstPixels;
@@ -367,7 +368,7 @@ run_test(const TestCase &test)
 
 		blit(test);
 
-		pass = verify(test, fbo, 0, 3);
+		pass = verify(test, fbo, 0);
 
 		if (!piglit_automatic) {
 			piglit_present_results();
