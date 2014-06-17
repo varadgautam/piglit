@@ -27,7 +27,6 @@ import os.path
 import re
 import sys
 import xml.etree.cElementTree as ElementTree
-from textwrap import dedent
 
 # Export 'debug' so other Piglit modules can easily enable it.
 debug = False
