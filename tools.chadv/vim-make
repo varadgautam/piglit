@@ -1,0 +1,10 @@
+#!/bin/bash
+
+set -eu
+
+if ! python2 tests/util/gen_dispatch.py -o tests/util "$@" >& log; then
+	tail -32 log
+	exit 1
+fi
+
+#hh make piglit piglitutil_gl

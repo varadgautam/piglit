@@ -1,0 +1,3 @@
+#!/bin/bash
+
+git commit --fixup=fa5a05b4fbc75c1c4b8cec303927f133c79d024b "$@"
