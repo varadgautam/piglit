@@ -7,4 +7,4 @@ if ! python2 tests/util/gen_dispatch.py -o tests/util "$@" >& log; then
 	exit 1
 fi
 
-#hh make piglit piglitutil_gl
+#hh make piglit piglitutil_{gl,gles1,gles2,gles3}
