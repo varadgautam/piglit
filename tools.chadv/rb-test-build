@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -eu
+
+while true; do
+    git clean -xfd
+    hh scrub piglit
+    hh configure piglit
+    hh build piglit
+    git rebase --continue
+done

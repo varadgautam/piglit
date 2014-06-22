@@ -1,0 +1,78 @@
+#!/bin/bash
+
+set -eu
+
+prog_name="$(basename "$0")"
+
+opts_spec="\
+$prog_name [-s] [-b] [-g]
+--
+  Options
+g gen
+s scrub
+b build libpiglitutil_gl*
+"
+
+arg_scrub=false
+arg_build=false
+arg_gen=false
+
+function die {
+    echo "error: $@"
+    exit 1
+} >/dev/stderr
+
+function usage_error {
+    parse_args --help
+} >/dev/stderr
+
+function parse_args {
+    eval "$(echo "$opts_spec" | git rev-parse --parseopt -- "$@" || echo exit $?)"
+
+    while [[ $# -ne 0 ]]; do
+        case "$1" in
+            '--')
+                shift
+                break
+                ;;
+            '-g')
+                arg_gen=true
+                shift
+                ;;
+            '-s')
+                arg_scrub=true
+                shift
+                ;;
+            '-b')
+                arg_build=true
+                shift
+                ;;
+            *)
+                die "unrecognized option: $1"
+                ;;
+        esac
+    done
+
+    if [[ $# -gt 0 ]]; then
+        usage_error "trailing args: $@"
+    fi
+}
+
+parse_args "$@"
+
+if [[ $arg_gen = true ]]; then
+    python2 tests/util/gen_dispatch.py -o tests/util >& log \
+    || {
+            tail -32 log
+            exit 1
+    }
+fi
+
+if [[ $arg_scrub = true ]]; then
+    hh scrub piglit
+    hh configure piglit
+fi
+
+if [[ $arg_build = true ]]; then
+    hh make piglit piglitutil_{gl,gles1,gles2,gles3}
+fi
