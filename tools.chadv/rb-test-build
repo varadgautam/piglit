@@ -4,7 +4,8 @@ set -eu
 
 while true; do
     git clean -xfd
-    git radish vim-make -sgb
+    hh scrub piglit
+    hh configure piglit
     hh build piglit
     git rebase --continue
 done
