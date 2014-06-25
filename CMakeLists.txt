@@ -193,7 +193,8 @@ if(NOT import_numpy_error_code EQUAL 0)
 	message(FATAL_ERROR "numpy python module not found")
 endif(NOT import_numpy_error_code EQUAL 0)
 
-find_package(Mako 0.7 REQUIRED)
+#find_package(Mako 0.7 EXACT REQUIRED QUIET)
+find_package(Mako 0.7 EXACT REQUIRED)
 
 # Default to compiling with debug information (`gcc -g`):
 if(NOT CMAKE_BUILD_TYPE)
