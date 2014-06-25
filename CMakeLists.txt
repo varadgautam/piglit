@@ -183,8 +183,7 @@ if(NOT DEFINED python)
 	message(FATAL_ERROR "python version 2.x (where x >= 6) required")
 endif(NOT DEFINED python)
 
-# Check for the presence of several python packages, which are needed to build
-# generated tests.
+# Require numpy
 execute_process(
 	COMMAND ${python} -c "import numpy"
 	OUTPUT_QUIET
@@ -193,14 +192,8 @@ execute_process(
 if(NOT import_numpy_error_code EQUAL 0)
 	message(FATAL_ERROR "numpy python module not found")
 endif(NOT import_numpy_error_code EQUAL 0)
-execute_process(
-	COMMAND ${python} -c "from mako.template import Template"
-	OUTPUT_QUIET
-	ERROR_QUIET
-	RESULT_VARIABLE import_mako_error_code)
-if(NOT import_mako_error_code EQUAL 0)
-	message(FATAL_ERROR "mako.template python module not found")
-endif(NOT import_mako_error_code EQUAL 0)
+
+find_package(Mako 0.7 REQUIRED)
 
 # Default to compiling with debug information (`gcc -g`):
 if(NOT CMAKE_BUILD_TYPE)
