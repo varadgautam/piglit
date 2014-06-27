@@ -28,6 +28,35 @@
 #include <assert.h>
 #include <stdbool.h>
 
+#include "piglit-list.h"
+
+enum piglit_gl_api {
+	PIGLIT_GL_API_CORE,
+	PIGLIT_GL_API_COMPAT,
+	PIGLIT_GL_API_ES1,
+	PIGLIT_GL_API_ES2,
+};
+
+enum piglit_gl_context_attrib {
+	PIGLIT_GL_CONTEXT_DEBUG                     = 1 << 0,
+	PIGLIT_GL_CONTEXT_FORWARD_COMPAT            = 1 << 1,
+};
+
+struct piglit_gl_context_flavor {
+	enum piglit_gl_api api;
+
+	/**
+	 * The API version multiplied by 10.
+	 * For example, use 31 for OpenGL ES 3.1.
+	 */
+	uint8_t version;
+
+	bool debug; /**< A debug context. */
+	bool fwd_compat; /**< A forward-compatible context. */
+
+	struct pgl_list_node link;
+};
+
 /**
  * A bitmask of these enums specifies visual attributes for the test's window.
  *
