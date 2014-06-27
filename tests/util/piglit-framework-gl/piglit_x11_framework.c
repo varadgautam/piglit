@@ -214,8 +214,9 @@ destroy(struct piglit_gl_framework *gl_fw)
 }
 
 struct piglit_gl_framework*
-piglit_x11_framework_create(const struct piglit_gl_test_config *test_config,
-                            int32_t platform)
+piglit_x11_framework_create(enum piglit_dispatch_api api,
+			    const struct piglit_gl_test_config *test_config,
+			    int32_t platform)
 {
 	struct piglit_x11_framework *x11_fw = NULL;
 	struct piglit_winsys_framework *winsys_fw = NULL;
@@ -226,7 +227,7 @@ piglit_x11_framework_create(const struct piglit_gl_test_config *test_config,
 	winsys_fw = &x11_fw->winsys_fw;
 	gl_fw = &x11_fw->winsys_fw.wfl_fw.gl_fw;
 
-	ok = piglit_winsys_framework_init(&x11_fw->winsys_fw,
+	ok = piglit_winsys_framework_init(&x11_fw->winsys_fw, api,
 	                                  test_config, platform);
 	if (!ok)
 		goto fail;

@@ -66,7 +66,8 @@ destroy(struct piglit_gl_framework *gl_fw)
 }
 
 struct piglit_gl_framework*
-piglit_gbm_framework_create(const struct piglit_gl_test_config *test_config)
+piglit_gbm_framework_create(enum piglit_dispatch_api api,
+			    const struct piglit_gl_test_config *test_config)
 {
 	struct piglit_winsys_framework *winsys_fw = NULL;
 	struct piglit_gl_framework *gl_fw = NULL;
@@ -75,7 +76,7 @@ piglit_gbm_framework_create(const struct piglit_gl_test_config *test_config)
 	winsys_fw = calloc(1, sizeof(*winsys_fw));
 	gl_fw = &winsys_fw->wfl_fw.gl_fw;
 
-	ok = piglit_winsys_framework_init(winsys_fw, test_config,
+	ok = piglit_winsys_framework_init(winsys_fw, api, test_config,
 	                           WAFFLE_PLATFORM_GBM);
 	if (!ok)
 		goto fail;

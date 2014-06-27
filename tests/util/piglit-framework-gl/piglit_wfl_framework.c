@@ -605,6 +605,7 @@ make_context_current(struct piglit_wfl_framework *wfl_fw,
 
 bool
 piglit_wfl_framework_init(struct piglit_wfl_framework *wfl_fw,
+                          enum piglit_dispatch_api api,
                           const struct piglit_gl_test_config *test_config,
                           int32_t platform,
                           const int32_t partial_config_attrib_list[])
@@ -627,7 +628,7 @@ piglit_wfl_framework_init(struct piglit_wfl_framework *wfl_fw,
 		initialized_platform = platform;
 	}
 
-	ok = piglit_gl_framework_init(&wfl_fw->gl_fw, test_config);
+	ok = piglit_gl_framework_init(api, &wfl_fw->gl_fw, test_config);
 	if (!ok)
 		goto fail;
 

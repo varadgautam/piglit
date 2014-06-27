@@ -263,7 +263,7 @@ piglit_glut_framework_create(
 		piglit_report_result(PIGLIT_SKIP);
 	}
 
-	ok = piglit_gl_framework_init(&glut_fw.gl_fw, test_config);
+	ok = piglit_gl_framework_init(api, &glut_fw.gl_fw, test_config);
 	if (!ok)
 		return NULL;
 

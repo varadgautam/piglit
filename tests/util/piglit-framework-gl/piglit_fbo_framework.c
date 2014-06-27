@@ -150,7 +150,7 @@ piglit_fbo_framework_create(
 	wfl_fw = calloc(1, sizeof(*wfl_fw));
 	gl_fw = &wfl_fw->gl_fw;
 
-	ok = piglit_wfl_framework_init(wfl_fw, test_config, platform, NULL);
+	ok = piglit_wfl_framework_init(wfl_fw, api, test_config, platform, NULL);
 	if (!ok)
 		goto fail;
 

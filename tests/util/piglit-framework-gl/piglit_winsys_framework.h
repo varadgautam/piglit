@@ -78,6 +78,7 @@ piglit_winsys_framework_create(
  */
 bool
 piglit_winsys_framework_init(struct piglit_winsys_framework *winsys_fw,
+                             enum piglit_dispatch_api api,
                              const struct piglit_gl_test_config *test_config,
                              int32_t platform);
 

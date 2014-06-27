@@ -26,4 +26,5 @@
 #include "piglit_winsys_framework.h"
 
 struct piglit_gl_framework*
-piglit_wl_framework_create(const struct piglit_gl_test_config *test_config);
+piglit_wl_framework_create(enum piglit_dispatch_api api,
+			   const struct piglit_gl_test_config *test_config);

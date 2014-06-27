@@ -86,7 +86,8 @@ struct piglit_gl_framework*
 piglit_gl_framework_create(const struct piglit_gl_test_config *test_config);
 
 bool
-piglit_gl_framework_init(struct piglit_gl_framework *gl_fw,
+piglit_gl_framework_init(enum piglit_dispatch_api api,
+                         struct piglit_gl_framework *gl_fw,
                          const struct piglit_gl_test_config *test_config);
 
 void

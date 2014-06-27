@@ -164,19 +164,19 @@ piglit_winsys_framework_create(
 #ifdef PIGLIT_HAS_X11
 	case WAFFLE_PLATFORM_GLX:
 	case WAFFLE_PLATFORM_X11_EGL:
-		return piglit_x11_framework_create(test_config, platform);
+		return piglit_x11_framework_create(api, test_config, platform);
 #endif
 
 #ifdef PIGLIT_HAS_GBM
 	case WAFFLE_PLATFORM_GBM:
-		return piglit_gbm_framework_create(test_config);
+		return piglit_gbm_framework_create(api, test_config);
 #endif
 
 /* There is no need to #ifdef out Piglit support for Wayland yet
  * because Piglit calls no Wayland functions.
  */
 	case WAFFLE_PLATFORM_WAYLAND:
-		return piglit_wl_framework_create(test_config);
+		return piglit_wl_framework_create(api, test_config);
 	default:
 		assert(0);
 		return NULL;
@@ -185,6 +185,7 @@ piglit_winsys_framework_create(
 
 bool
 piglit_winsys_framework_init(struct piglit_winsys_framework *winsys_fw,
+                             enum piglit_dispatch_api api,
                              const struct piglit_gl_test_config *test_config,
                              int32_t platform)
 {
@@ -192,7 +193,7 @@ piglit_winsys_framework_init(struct piglit_winsys_framework *winsys_fw,
 	struct piglit_gl_framework *gl_fw = &wfl_fw->gl_fw;
 	bool ok = true;
 
-	ok = piglit_wfl_framework_init(wfl_fw, test_config, platform,
+	ok = piglit_wfl_framework_init(wfl_fw, api, test_config, platform,
 	                               choose_config_attribs(test_config));
 	if (!ok)
 		goto fail;
