@@ -139,7 +139,7 @@ typedef piglit_dispatch_function_ptr (*piglit_get_ext_proc_address_function_ptr)
 
 typedef void (*piglit_error_function_ptr)(const char *);
 
-typedef enum {
+typedef enum piglit_dispatch_api {
 	PIGLIT_DISPATCH_GL,
 	PIGLIT_DISPATCH_ES1,
 	PIGLIT_DISPATCH_ES2

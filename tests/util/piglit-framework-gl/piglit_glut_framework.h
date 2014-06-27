@@ -25,5 +25,9 @@
 
 #include "piglit_gl_framework.h"
 
+enum piglit_dispatch_api;
+
 struct piglit_gl_framework*
-piglit_glut_framework_create(const struct piglit_gl_test_config *test_config);
+piglit_glut_framework_create(
+		enum piglit_dispatch_api api,
+		const struct piglit_gl_test_config *test_config);

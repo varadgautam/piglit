@@ -41,22 +41,33 @@
 struct piglit_gl_framework*
 piglit_gl_framework_create(const struct piglit_gl_test_config *test_config)
 {
-#ifdef PIGLIT_USE_WAFFLE
-	struct piglit_gl_framework *gl_fw = NULL;
+	struct piglit_gl_framework *gl_fw;
+	enum piglit_dispatch_api api;
 
+#if defined(PIGLIT_USE_OPENGL)
+	api = PIGLIT_DISPATCH_GL;
+#elif defined(PIGLIT_USE_OPENGL_ES1)
+	api = PIGLIT_DISPATCH_ES1;
+#elif defined(PIGLIT_USE_OPENGL_ES2) || defined(PIGLIT_USE_OPENGL_ES3)
+	api = PIGLIT_DISPATCH_ES2;
+#else
+#	error
+#endif
+
+#ifdef PIGLIT_USE_WAFFLE
 	if (piglit_use_fbo) {
-		gl_fw = piglit_fbo_framework_create(test_config);
+		gl_fw = piglit_fbo_framework_create(api, test_config);
 	}
 
 	if (gl_fw == NULL) {
 		piglit_use_fbo = false;
-		gl_fw = piglit_winsys_framework_factory(test_config);
+		gl_fw = piglit_winsys_framework_create(api, test_config);
 	}
+#else
+	gl_fw = piglit_glut_framework_create(api, test_config);
+#endif
 
 	return gl_fw;
-#else
-	return piglit_glut_framework_create(test_config);
-#endif
 }
 
 static void

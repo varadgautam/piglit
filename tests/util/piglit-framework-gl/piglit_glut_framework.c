@@ -244,7 +244,9 @@ check_gl_version(const struct piglit_gl_test_config *test_config)
 }
 
 struct piglit_gl_framework*
-piglit_glut_framework_create(const struct piglit_gl_test_config *test_config)
+piglit_glut_framework_create(
+		enum piglit_dispatch api,
+		const struct piglit_gl_test_config *test_config)
 {
 	bool ok = true;
 
