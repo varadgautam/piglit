@@ -472,15 +472,19 @@ make_context_current_singlepass(struct piglit_wfl_framework *wfl_fw,
 	                         wfl_fw->window,
 	                         wfl_fw->context);
 
-#ifdef PIGLIT_USE_OPENGL
-	piglit_dispatch_default_init(PIGLIT_DISPATCH_GL);
-#elif defined(PIGLIT_USE_OPENGL_ES1)
-	piglit_dispatch_default_init(PIGLIT_DISPATCH_ES1);
-#elif defined(PIGLIT_USE_OPENGL_ES2) || defined(PIGLIT_USE_OPENGL_ES3)
-	piglit_dispatch_default_init(PIGLIT_DISPATCH_ES2);
-#else
-#	error
-#endif
+
+	switch (api) {
+	case PIGLIT_GL_CORE:
+	case PIGLIT_GL_COMPAT:
+		piglit_dispatch_default_init(PIGLIT_DISPATCH_GL);
+		break;
+	case PIGLIT_GL_ES1:
+		piglit_dispatch_default_init(PIGLIT_DISPATCH_ES1);
+		break;
+	case PIGLIT_GL_ES2:
+		piglit_dispatch_default_init(PIGLIT_DISPATCH_ES2);
+		break;
+	}
 
 	ok = check_gl_version(test_config, api, ctx_desc);
 	if (!ok)
