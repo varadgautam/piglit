@@ -55,25 +55,24 @@ run_test(struct piglit_gl_framework *gl_fw,
 }
 
 static bool
-init_gl(struct piglit_wfl_framework *wfl_fw)
+init_gl(struct piglit_wfl_framework *wfl_fw,
+        enum piglit_dispatch_api api)
 {
-#ifdef PIGLIT_USE_OPENGL_ES1
-	return false;
-#else
 	const struct piglit_gl_test_config *test_config = wfl_fw->gl_fw.test_config;
 
 	GLuint tex, depth = 0;
 	GLenum status;
 
-#ifdef PIGLIT_USE_OPENGL
-	piglit_dispatch_default_init(PIGLIT_DISPATCH_GL);
+	assert(api != PIGLIT_DISPATCH_ES1);
+	piglit_dispatch_default_init(api);
 
-	if (piglit_get_gl_version() < 20)
-		return false;
+	if (api == PIGLIT_DISPATCH_GL) {
+		if (piglit_get_gl_version() < 20)
+			return false;
 
-	if (!piglit_is_extension_supported("GL_ARB_framebuffer_object"))
-		return false;
-#endif
+		if (!piglit_is_extension_supported("GL_ARB_framebuffer_object"))
+			return false;
+	}
 
 	glGenFramebuffers(1, &piglit_winsys_fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, piglit_winsys_fbo);
@@ -125,7 +124,6 @@ init_gl(struct piglit_wfl_framework *wfl_fw)
 	}
 
 	return true;
-#endif
 }
 
 struct piglit_gl_framework*
@@ -133,14 +131,16 @@ piglit_fbo_framework_create(
 		enum piglit_dispatch_api api,
 		const struct piglit_gl_test_config *test_config)
 {
-#ifdef PIGLIT_USE_OPENGL_ES1
-	return NULL;
-#else
 	struct piglit_wfl_framework *wfl_fw;
 	struct piglit_gl_framework *gl_fw;
-
-	int32_t platform = piglit_wfl_framework_choose_platform(test_config);
+	enum waffle_enum platform;
 	bool ok = true;
+
+	if (api == PIGLIT_DISPATCH_ES1) {
+		return NULL;
+	}
+
+	platform = piglit_wfl_framework_choose_platform(test_config);
 
 	if (test_config->window_samples > 1) {
 		puts("The FBO mode doesn't support multisampling\n");
@@ -154,7 +154,7 @@ piglit_fbo_framework_create(
 	if (!ok)
 		goto fail;
 
-	ok = init_gl(wfl_fw);
+	ok = init_gl(wfl_fw, api);
 	if (!ok)
 		goto fail;
 
@@ -166,5 +166,4 @@ piglit_fbo_framework_create(
 fail:
 	destroy(gl_fw);
 	return NULL;
-#endif /* PIGLIT_USE_OPENGL_ES1 */
 }
