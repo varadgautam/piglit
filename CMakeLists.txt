@@ -211,6 +211,19 @@ if (NOT MSVC)
 		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 	ENDIF (CXX_COMPILER_FLAG_WALL)
 
+	CHECK_C_COMPILER_FLAG(
+		"-Werror=implicit-function-declaration"
+		C_COMPILER_FLAG_WERROR_IMPL_FUNC_DECL)
+	CHECK_CXX_COMPILER_FLAG(
+		"-Werror=implicit-function-declaration"
+		CXX_COMPILER_FLAG_WERROR_IMPL_FUNC_DECL)
+	IF (C_COMPILER_FLAG_WERROR_IMPL_FUNC_DECL)
+		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror=implicit-function-declaration")
+	ENDIF ()
+	IF (CXX_COMPILER_FLAG_WERROR_IMPL_FUNC_DECL)
+		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=implicit-function-declaration")
+	ENDIF ()
+
 	# Unfortunately MSVC does not support C99.  Among all features enabled
 	# by C99, declarations after statements is the most frequently used.
 	# For portability sake, we request gcc to warn when this is used.
