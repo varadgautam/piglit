@@ -303,31 +303,32 @@ check_gl_version(const struct piglit_gl_test_config *test_config,
                  enum piglit_gl_api api,
 		 const char *context_description)
 {
+	int actual_version;
+	int required_version;
+
 	switch (api) {
 	case PIGLIT_GL_CORE:
+		required_version = test_config->supports_gl_core_version;
+		break;
+	case PIGLIT_GL_COMPAT:
+		required_version = test_config->supports_gl_compat_version;
+		break;
 	case PIGLIT_GL_ES1:
 	case PIGLIT_GL_ES2:
-		/* There is no need to check the context version here, because
-		 * Piglit explicitly supplied the desired version to
-		 * waffle_config_choose().
-		 */
-		return true;
-	case PIGLIT_GL_COMPAT: {
-		int actual_version = piglit_get_gl_version();
-		if (actual_version >= test_config->supports_gl_compat_version)
-		   return true;
+		required_version = test_config->supports_gl_es_version;
+		break;
+	}
 
-		printf("piglit: info: Requested a %s, but actual context "
+	actual_version = piglit_get_gl_version();
+	if (actual_version < required_version) {
+		printf("piglit: info: Requested an %s, but actual context "
 		       "version is %d.%d\n",
 		       context_description,
-		       actual_version / 10,
-		       actual_version % 10);
+		       actual_version / 10, actual_version % 10);
 		return false;
 	}
-	default:
-		assert(0);
-		return false;
-	}
+
+	return true;
 }
 
 /**
