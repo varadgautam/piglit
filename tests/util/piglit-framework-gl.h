@@ -29,6 +29,62 @@
 #include <stdbool.h>
 
 /**
+ * Every OpenGL and OpenGL ES context belongs to one of these API families.
+ */
+enum piglit_gl_api {
+	/**
+	 * A context that is backwards compatible with OpenGL ES 1.0.
+	 */
+	PIGLIT_GL_API_ES1,
+
+	/**
+	 * A context that is backwards compatible with OpenGL ES 2.0.
+	 */
+	PIGLIT_GL_API_ES2,
+
+	/**
+	 * A context that is backwards compatible with a Core OpenGL 3.1
+	 * context, where "core" means no support for the GL_ARB_compatibility
+	 * extension.
+	 */
+	PIGLIT_GL_API_CORE,
+
+	/**
+	 * A context that is backwards compatible with OpenGL 1.0.
+	 */
+	PIGLIT_GL_API_COMPAT,
+};
+
+/**
+ * Bitmask values for miscellaneous context attributes.
+ */
+enum piglit_gl_ctx_attrib {
+	/** Analogous to EGL_CONTEXT_OPENGL_DEBUG in EGL 1.5. */
+	PIGLIT_GL_CTX_DEBUG = 1 << 0,
+
+	/** Analogous to EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE in EGL 1.5. */
+	PIGLIT_GL_CTX_FORWARD_COMPATIBLE = 1 << 1,
+};
+
+/**
+ * The context description passed to the platform's context constructor, such
+ * as eglCreateContext.
+ */
+struct piglit_gl_ctx_flavor {
+	enum piglit_gl_api api;
+
+	/**
+	 * The API version multiplied by 10.  For example, this is 31 for
+	 * OpenGL ES
+	 * 3.1.
+	 */
+	uint8_t version;
+
+	bool debug; /**< \see PIGLIT_GL_CTX_DEBUG */
+	bool fwd_compat; /**< \see PIGLIT_GL_CTX_FORWARD_COMPATIBLE */
+};
+
+/**
  * A bitmask of these enums specifies visual attributes for the test's window.
  *
  * \see piglit_gl_test_config::window_visual
