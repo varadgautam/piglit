@@ -30,7 +30,7 @@
 #include "piglit-framework-gl.h"
 
 /**
- * Abstract class. Use piglit_gl_framework_factory to create a concrete
+ * Abstract class. Use piglit_gl_framework_create to create a concrete
  * instance.
  */
 struct piglit_gl_framework {
@@ -83,7 +83,7 @@ struct piglit_gl_framework {
 };
 
 struct piglit_gl_framework*
-piglit_gl_framework_factory(const struct piglit_gl_test_config *test_config);
+piglit_gl_framework_create(const struct piglit_gl_test_config *test_config);
 
 bool
 piglit_gl_framework_init(struct piglit_gl_framework *gl_fw,

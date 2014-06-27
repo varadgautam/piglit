@@ -39,7 +39,7 @@
 #endif
 
 struct piglit_gl_framework*
-piglit_gl_framework_factory(const struct piglit_gl_test_config *test_config)
+piglit_gl_framework_create(const struct piglit_gl_test_config *test_config)
 {
 #ifdef PIGLIT_USE_WAFFLE
 	struct piglit_gl_framework *gl_fw = NULL;
@@ -50,7 +50,7 @@ piglit_gl_framework_factory(const struct piglit_gl_test_config *test_config)
 
 	if (gl_fw == NULL) {
 		piglit_use_fbo = false;
-		gl_fw = piglit_winsys_framework_factory(test_config);
+		gl_fw = piglit_winsys_framework_create(test_config);
 	}
 
 	return gl_fw;

@@ -141,7 +141,7 @@ piglit_gl_test_run(int argc, char *argv[],
 	piglit_width = config->window_width;
 	piglit_height = config->window_height;
 
-	gl_fw = piglit_gl_framework_factory(config);
+	gl_fw = piglit_gl_framework_create(config);
 	if (gl_fw == NULL) {
 		printf("piglit: error: failed to create "
 		       "piglit_gl_framework\n");
