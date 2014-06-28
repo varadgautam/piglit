@@ -17,6 +17,7 @@ set(UTIL_INCLUDES
 	)
 
 set(UTIL_SOURCES
+	piglit-array.c
 	piglit-list.c
 	piglit-log.c
 	piglit-util.c
