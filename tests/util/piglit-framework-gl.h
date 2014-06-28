@@ -58,6 +58,17 @@ struct piglit_gl_context_flavor {
 };
 
 /**
+ * \brief Get the context flavor's name.
+ *
+ * Write the context flavor's name to \a buf. The function writes no more than
+ * \a size bytes, including the terminal null.  The function's return value
+ * behaves like that of snprintf().
+ */
+int
+piglit_gl_context_flavor_name(char buf[], size_t size,
+			      const struct piglit_gl_context_flavor *flavor);
+
+/**
  * A bitmask of these enums specifies visual attributes for the test's window.
  *
  * \see piglit_gl_test_config::window_visual

@@ -43,6 +43,39 @@ static void
 process_args(int *argc, char *argv[], unsigned *force_samples,
 	     struct piglit_gl_test_config *config);
 
+int
+piglit_gl_context_flavor_name(char buf[], size_t size,
+			      const struct piglit_gl_context_flavor *flavor)
+{
+	const char *api = "(Invalid API)";
+	const char *fwd_compat = "";
+	const char *debug = "";
+
+	switch (flavor->api) {
+	case PIGLIT_GL_API_CORE:
+		api = "Core ";
+		break;
+	case PIGLIT_GL_API_COMPAT:
+		api = "Compatibility ";
+		break;
+	case PIGLIT_GL_API_ES1:
+	case PIGLIT_GL_API_ES2:
+		api = "ES ";
+		break;
+	}
+
+	if (flavor->fwd_compat) {
+		fwd_compat = "Forward-Compatible ";
+	}
+	if (flavor->debug) {
+		debug = "Debug ";
+	}
+
+	return snprintf(buf, size, "OpenGL %s%d.%d %s%sContext",
+		        api, flavor->version / 10, flavor->version % 10,
+		        fwd_compat, debug);
+}
+
 void
 piglit_gl_test_config_init(struct piglit_gl_test_config *config)
 {
