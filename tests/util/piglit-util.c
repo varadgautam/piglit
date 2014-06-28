@@ -771,3 +771,16 @@ piglit_gettid(void)
 	return 0;
 #endif
 }
+
+void*
+memdup(const void *src, size_t n)
+{
+	void *dest;
+
+	dest = malloc(n);
+	if (!dest) {
+		return NULL;
+	}
+
+	return memcpy(dest, src, n);
+}

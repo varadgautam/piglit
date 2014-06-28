@@ -281,6 +281,25 @@ piglit_parse_subtest_args(int *argc, char *argv[],
 uint64_t
 piglit_gettid(void);
 
+/**
+ * \brief Duplicate \a n bytes from the memory area \a src.
+ *
+ * Like strdup(), but for arbitrary memory.
+ */
+void*
+memdup(const void *src, size_t n);
+
+#ifdef DOXYGEN
+/**
+ * \brief Type-generic variant of memdup().
+ *
+ * Return a duplicate of the memory of \a t.
+ */
+T* memdup_g(const T *t);
+#else
+#define memdup_g(x) ((__typeof__(x)) memdup((x), sizeof(*(x))))
+#endif
+
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif
