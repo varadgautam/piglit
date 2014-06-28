@@ -261,6 +261,17 @@ struct piglit_gl_test_config {
 };
 
 /**
+ * \brief Get a human-readable name for the context flavor.
+ *
+ * Write the context flavor's name to \a name. The function writes no more than
+ * \a size bytes, including the terminal null.  The function's return value
+ * behaves like that of snprintf().
+ */
+int
+piglit_gl_ctx_flavor_get_name(char name[], size_t size,
+			      const struct piglit_gl_ctx_flavor *flavor);
+
+/**
  * Initialize @a config with default values, some of which may come
  * from command line arguments.
  */
