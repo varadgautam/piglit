@@ -104,6 +104,7 @@ static void
 init_glut(void)
 {
 	const struct piglit_gl_test_config *test_config = glut_fw.gl_fw.test_config;
+	const struct piglit_gl_ctx_flavor *flavor = glut_fw.gl_fw.ctx_flavor;
 	char *argv[] = {"piglit"};
 	int argc = 1;
 	unsigned flags = GLUT_RGB;
@@ -133,16 +134,12 @@ init_glut(void)
 #else
 	(void)error_func;
 #endif
-#ifdef GLUT_CORE_PROFILE
-	if (test_config->supports_gl_core_version) {
-		glutInitContextVersion(test_config->supports_gl_core_version / 10,
-				       test_config->supports_gl_core_version % 10);
+
+	glutInitContextVersion(flavor->version / 10,
+			       flavor->version % 10);
+	if (flavor->api = PIGLIT_GL_CORE) {
 		glutInitContextFlags(GLUT_CORE_PROFILE);
-	} else {
-		glutInitContextVersion(test_config->supports_gl_compat_version / 10,
-				       test_config->supports_gl_compat_version % 10);
 	}
-#endif
 
 	glut_fw.window = glutCreateWindow("Piglit");
 
@@ -199,42 +196,29 @@ set_reshape_func(struct piglit_gl_framework *gl_fw,
  * requested version.
  */
 static bool
-check_gl_version(const struct piglit_gl_test_config *test_config)
+check_gl_version(const struct piglit_gl_context_flavor *flavor)
 {
 	int actual_version = piglit_get_gl_version();
 
-	if (test_config->supports_gl_core_version) {
-		if (actual_version < test_config->supports_gl_core_version) {
-			printf("Test requires GL version %d.%d, but actual version is "
-			       "%d.%d\n",
-			       test_config->supports_gl_core_version / 10,
-			       test_config->supports_gl_core_version % 10,
-			       actual_version / 10,
-			       actual_version % 10);
-			return false;
-		}
-		return true;
-	}
-
-	if (actual_version < test_config->supports_gl_compat_version) {
+	if (actual_version < flavor->version) {
 		printf("Test requires GL version %d.%d, but actual version is "
-		       "%d.%d\n",
-		       test_config->supports_gl_compat_version / 10,
-		       test_config->supports_gl_compat_version % 10,
-		       actual_version / 10,
-		       actual_version % 10);
+			"%d.%d\n",
+			flavor->version / 10,
+			flavor->version % 10,
+			actual_version / 10,
+			actual_version % 10);
 		return false;
 	}
 
 	if (piglit_is_core_profile &&
-	    test_config->supports_gl_core_version == 0) {
+	    flavor->api == PIGLIT_GL_COMPAT) {
 		/* We have a core profile context but the test needs a
 		 * compat profile.  We can't run the test.
 		 */
 		printf("Test requires compat version %d.%d or later but "
 		       "context is core profile %d.%d.\n",
-		       test_config->supports_gl_compat_version / 10,
-		       test_config->supports_gl_compat_version % 10,
+		       flavor->version / 10,
+		       flavor->version % 10,
 		       actual_version / 10,
 		       actual_version % 10);
 		return false;
@@ -243,19 +227,41 @@ check_gl_version(const struct piglit_gl_test_config *test_config)
 	return true;
 }
 
+static bool
+glut_supports_api(enum piglit_gl_api api)
+{
+	switch (api) {
+	case PIGLIT_GL_CORE:
+		#ifdef GLUT_CORE_PROFILE
+			return true;
+		#else
+			piglit_logi("Skipping OpenGL Core Context because GLUT "
+				    "lacks supports");
+			return false;
+		#endif
+	case PIGLIT_GL_COMPAT:
+		return true;
+	case PIGLIT_GL_ES1:
+	case PIGLIT_GL_ES2:
+			piglit_logi("Skipping OpenGL ES Context because GLUT "
+				    "lacks supports");
+			return false;
+		return false;
+	}
+
+	assert(0);
+	return false;
+}
+
 struct piglit_gl_framework*
 piglit_glut_framework_create(const struct piglit_gl_ctx_flavor *flavor,
 			     const struct piglit_gl_test_config *test_config)
 {
 	bool ok = true;
 
-#ifndef GLUT_CORE_PROFILE
-	if (!test_config->supports_gl_compat_version) {
-		printf("GLUT can create only GL compatibility contexts, "
-			"which the test does not support running under.\n");
-		piglit_report_result(PIGLIT_SKIP);
+	if (!glut_supports_api(flavor->api)) {
+		return NULL;
 	}
-#endif
 
 	if (test_config->window_samples > 1) {
 		printf("GLUT doesn't support MSAA visuals.\n");
@@ -276,7 +282,7 @@ piglit_glut_framework_create(const struct piglit_gl_ctx_flavor *flavor,
 			piglit_is_core_profile = true;
 	}
 
-	if (!check_gl_version(test_config))
+	if (!check_gl_version(flavor))
 		piglit_report_result(PIGLIT_SKIP);
 
 	glut_fw.gl_fw.swap_buffers = swap_buffers;
