@@ -65,4 +65,4 @@ piglit_wfl_framework_teardown(struct piglit_wfl_framework *wfl_fw);
  * WAFFLE_PLATFORM_*.
  */
 int32_t
-piglit_wfl_framework_choose_platform(const struct piglit_gl_test_config *test_config);
+piglit_wfl_framework_choose_platform(const struct piglit_gl_ctx_flavor *flavor);
