@@ -39,11 +39,15 @@
 #endif
 
 struct piglit_gl_framework*
-piglit_gl_framework_create(const struct piglit_gl_test_config *test_config)
+piglit_gl_framework_create(const struct piglit_gl_ctx_flavor *flavor,
+			   const struct piglit_gl_test_config *test_config)
 {
-#ifdef PIGLIT_USE_WAFFLE
 	struct piglit_gl_framework *gl_fw = NULL;
 
+	/* FINISHME: Use the context flavor. */
+	(void) flavor;
+
+#ifdef PIGLIT_USE_WAFFLE
 	if (piglit_use_fbo) {
 		gl_fw = piglit_fbo_framework_create(test_config);
 	}
@@ -53,10 +57,11 @@ piglit_gl_framework_create(const struct piglit_gl_test_config *test_config)
 		gl_fw = piglit_winsys_framework_create(test_config);
 	}
 
-	return gl_fw;
 #else
-	return piglit_glut_framework_create(test_config);
+	gl_fw =  piglit_glut_framework_create(test_config);
 #endif
+
+	return gl_fw;
 }
 
 static void

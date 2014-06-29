@@ -298,11 +298,43 @@ piglit_gl_process_args(int *argc, char *argv[],
 
 }
 
+static bool
+build_accepts_flavor(const struct piglit_gl_ctx_flavor *flavor)
+{
+	switch (flavor->api) {
+	case PIGLIT_GL_API_CORE:
+	case PIGLIT_GL_API_COMPAT:
+		#ifdef PIGLIT_USE_OPENGL
+			return true;
+		#else
+			return false;
+		#endif
+	case PIGLIT_GL_API_ES1:
+		#ifdef PIGLIT_USE_OPENGL_ES1
+			return true;
+		#else
+			return false;
+		#endif
+	case PIGLIT_GL_API_ES2:
+		#if defined(PIGLIT_USE_OPENGL_ES2)
+			return flavor->version < 30;
+		#elif defined(PIGLIT_USE_OPENGL_ES3)
+			return true;
+		#else
+			return false;
+		#endif
+	}
+
+	assert(0);
+	return false;
+}
+
 void
 piglit_gl_test_run(int argc, char *argv[],
 		   const struct piglit_gl_test_config *config)
 {
 	struct pgl_list flavors;
+	struct pgl_list_link *link;
 
 	piglit_width = config->window_width;
 	piglit_height = config->window_height;
@@ -315,15 +347,35 @@ piglit_gl_test_run(int argc, char *argv[],
 		piglit_report_result(PIGLIT_FAIL);
 	}
 
-	gl_fw = piglit_gl_framework_create(config);
-	if (gl_fw == NULL) {
-		printf("piglit: error: failed to create "
-		       "piglit_gl_framework\n");
-		piglit_report_result(PIGLIT_FAIL);
+	for (link = pgl_list_get_first(&flavors);
+	     link != NULL;
+	     link = pgl_list_get_next(link)) {
+		/* FIXME: Don't opencode container_of(). */
+		struct piglit_gl_ctx_flavor *flavor;
+
+		flavor = (void*) link
+		       + offsetof(struct piglit_gl_ctx_flavor, link);
+
+		if (!build_accepts_flavor(flavor)) {
+			/* The build doesn't accept the flavor, so don't try
+			 * running the test with it.
+			 */
+			continue;
+		}
+
+		gl_fw = piglit_gl_framework_create(flavor, config);
+		if (gl_fw) {
+			gl_fw->run_test(gl_fw, argc, argv);
+
+			/* The test has completed. Don't run the test again,
+			 * even if more context flavors are queued.
+			 */
+			return;
+		}
 	}
 
-	gl_fw->run_test(gl_fw, argc, argv);
-	assert(false);
+	piglit_logi("failed to create test framework; skipping test...");
+	piglit_report_result(PIGLIT_SKIP);
 }
 
 void
