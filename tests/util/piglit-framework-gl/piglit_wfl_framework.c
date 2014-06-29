@@ -603,6 +603,33 @@ make_context_current(struct piglit_wfl_framework *wfl_fw,
 	piglit_report_result(PIGLIT_SKIP);
 }
 
+/**
+ * Choose waffle platform from context flavor, initialize waffle. Return chosen
+ * platform.
+ */
+static enum waffle_enum
+init_platform(const struct piglit_gl_ctx_flavor *flavor)
+{
+	static enum waffle_enum old_platform = 0;
+	enum waffle_enum platform = 0;
+
+	platform = piglit_wfl_framework_choose_platform(flavor);
+	if (!platform) {
+		goto done;
+	}
+
+	if (old_platform) {
+		assert(platform == old_platform);
+		goto done;
+	}
+
+	wfl_checked_init((int32_t[]){WAFFLE_PLATFORM, platform, 0});
+	old_platform = platform;
+
+done:
+	return platform;
+}
+
 
 bool
 piglit_wfl_framework_init(struct piglit_wfl_framework *wfl_fw,
@@ -610,31 +637,16 @@ piglit_wfl_framework_init(struct piglit_wfl_framework *wfl_fw,
                           const struct piglit_gl_test_config *test_config,
                           const int32_t partial_config_attrib_list[])
 {
-	static bool is_waffle_initialized = false;
-	static int32_t initialized_platform = 0;
-	enum waffle_enum platform = 0;
 	bool ok = true;
-
-	platform = piglit_wfl_framework_choose_platform(flavor);
-
-	if (is_waffle_initialized) {
-		assert(platform == initialized_platform);
-	} else {
-		const int32_t attrib_list[] = {
-			WAFFLE_PLATFORM, platform,
-			0,
-		};
-
-		wfl_checked_init(attrib_list);
-		is_waffle_initialized = true;
-		initialized_platform = platform;
-	}
 
 	ok = piglit_gl_framework_init(&wfl_fw->gl_fw, flavor, test_config);
 	if (!ok)
 		goto fail;
 
-	wfl_fw->platform = platform;
+	wfl_fw->platform = init_platform(flavor);
+	if (!wfl_fw->platform)
+		goto fail;
+
 	wfl_fw->display = wfl_checked_display_connect(NULL);
 	make_context_current(wfl_fw, test_config, partial_config_attrib_list);
 
