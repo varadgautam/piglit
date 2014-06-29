@@ -163,8 +163,7 @@ piglit_winsys_framework_create(const struct piglit_gl_ctx_flavor *flavor,
 #ifdef PIGLIT_HAS_X11
 	case WAFFLE_PLATFORM_GLX:
 	case WAFFLE_PLATFORM_X11_EGL:
-		return piglit_x11_framework_create(flavor, test_config,
-						   platform);
+		return piglit_x11_framework_create(flavor, test_config);
 #endif
 
 #ifdef PIGLIT_HAS_GBM
@@ -186,16 +185,14 @@ piglit_winsys_framework_create(const struct piglit_gl_ctx_flavor *flavor,
 bool
 piglit_winsys_framework_init(struct piglit_winsys_framework *winsys_fw,
                              const struct piglit_gl_ctx_flavor *flavor,
-                             const struct piglit_gl_test_config *test_config,
-                             int32_t platform)
+                             const struct piglit_gl_test_config *test_config)
 {
 	struct piglit_wfl_framework *wfl_fw = &winsys_fw->wfl_fw;
 	struct piglit_gl_framework *gl_fw = &wfl_fw->gl_fw;
 	bool ok = true;
 
-	ok = piglit_wfl_framework_init(wfl_fw, flavor,
-				       test_config, platform,
-	                               choose_config_attribs(test_config));
+	ok = piglit_wfl_framework_init(wfl_fw, flavor, test_config,
+				       choose_config_attribs(test_config));
 	if (!ok)
 		goto fail;
 

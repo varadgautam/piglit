@@ -47,14 +47,10 @@ struct piglit_wfl_framework {
 struct piglit_wfl_framework*
 piglit_wfl_framework(struct piglit_gl_framework *gl_fw);
 
-/**
- * @param platform must be one of WAFFLE_PLATFORM_*.
- */
 bool
 piglit_wfl_framework_init(struct piglit_wfl_framework *wfl_fw,
 			  const struct piglit_gl_ctx_flavor *flavor,
                           const struct piglit_gl_test_config *test_config,
-                          int32_t platform,
                           const int32_t partial_config_attrib_list[]);
 
 void
