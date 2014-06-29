@@ -69,7 +69,8 @@ destroy(struct piglit_gl_framework *gl_fw)
 }
 
 struct piglit_gl_framework*
-piglit_wl_framework_create(const struct piglit_gl_test_config *test_config)
+piglit_wl_framework_create(const struct piglit_gl_ctx_flavor *flavor,
+			   const struct piglit_gl_test_config *test_config)
 {
 	struct piglit_winsys_framework *winsys_fw = NULL;
 	struct piglit_gl_framework *gl_fw = NULL;
@@ -78,7 +79,7 @@ piglit_wl_framework_create(const struct piglit_gl_test_config *test_config)
 	winsys_fw = calloc(1, sizeof(*winsys_fw));
 	gl_fw = &winsys_fw->wfl_fw.gl_fw;
 
-	ok = piglit_winsys_framework_init(winsys_fw, test_config,
+	ok = piglit_winsys_framework_init(winsys_fw, flavor, test_config,
 	                           WAFFLE_PLATFORM_WAYLAND);
 	if (!ok)
 		goto fail;

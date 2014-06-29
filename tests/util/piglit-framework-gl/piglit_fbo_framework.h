@@ -26,4 +26,5 @@
 #include "piglit_wfl_framework.h"
 
 struct piglit_gl_framework*
-piglit_fbo_framework_create(const struct piglit_gl_test_config *test_config);
+piglit_fbo_framework_create(const struct piglit_gl_ctx_flavor *flavor,
+			    const struct piglit_gl_test_config *test_config);

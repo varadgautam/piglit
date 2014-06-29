@@ -44,21 +44,18 @@ piglit_gl_framework_create(const struct piglit_gl_ctx_flavor *flavor,
 {
 	struct piglit_gl_framework *gl_fw = NULL;
 
-	/* FINISHME: Use the context flavor. */
-	(void) flavor;
-
 #ifdef PIGLIT_USE_WAFFLE
 	if (piglit_use_fbo) {
-		gl_fw = piglit_fbo_framework_create(test_config);
+		gl_fw = piglit_fbo_framework_create(flavor, test_config);
 	}
 
 	if (gl_fw == NULL) {
 		piglit_use_fbo = false;
-		gl_fw = piglit_winsys_framework_create(test_config);
+		gl_fw = piglit_winsys_framework_create(flavor, test_config);
 	}
 
 #else
-	gl_fw =  piglit_glut_framework_create(test_config);
+	gl_fw = piglit_glut_framework_create(flavor, test_config);
 #endif
 
 	return gl_fw;
@@ -104,6 +101,7 @@ validate_supported_apis(const struct piglit_gl_test_config *test_config)
 
 bool
 piglit_gl_framework_init(struct piglit_gl_framework *gl_fw,
+			 const struct piglit_gl_ctx_flavor *flavor,
                          const struct piglit_gl_test_config *test_config)
 {
 	validate_supported_apis(test_config);

@@ -244,7 +244,8 @@ check_gl_version(const struct piglit_gl_test_config *test_config)
 }
 
 struct piglit_gl_framework*
-piglit_glut_framework_create(const struct piglit_gl_test_config *test_config)
+piglit_glut_framework_create(const struct piglit_gl_ctx_flavor *flavor,
+			     const struct piglit_gl_test_config *test_config)
 {
 	bool ok = true;
 
@@ -261,7 +262,7 @@ piglit_glut_framework_create(const struct piglit_gl_test_config *test_config)
 		piglit_report_result(PIGLIT_SKIP);
 	}
 
-	ok = piglit_gl_framework_init(&glut_fw.gl_fw, test_config);
+	ok = piglit_gl_framework_init(&glut_fw.gl_fw, flavor, test_config);
 	if (!ok)
 		return NULL;
 
