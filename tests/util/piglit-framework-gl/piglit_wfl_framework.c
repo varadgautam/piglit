@@ -28,17 +28,14 @@
 
 #include "piglit_wfl_framework.h"
 
-enum context_flavor {
-	CONTEXT_GL_CORE,
-	CONTEXT_GL_COMPAT,
-	CONTEXT_GL_ES,
-};
-
 static bool
-make_context_current_singlepass(struct piglit_wfl_framework *wfl_fw,
-                                const struct piglit_gl_test_config *test_config,
-                                enum context_flavor flavor,
-                                const int32_t partial_config_attrib_list[]);
+setup_gl(const struct piglit_gl_ctx_flavor *flavor,
+	 const struct piglit_gl_test_config *test_config,
+	 bool use_window_attribs,
+	 struct waffle_display *display,
+	 struct waffle_config **out_config,
+	 struct waffle_context **out_context,
+	 struct waffle_window **out_window);
 
 struct piglit_wfl_framework*
 piglit_wfl_framework(struct piglit_gl_framework *gl_fw)
@@ -121,261 +118,6 @@ piglit_wfl_framework_choose_platform(const struct piglit_gl_ctx_flavor *flavor)
 }
 
 /**
- * \brief Concatenate two zero-terminated attribute lists.
- *
- * This function interprets null pointers as empty lists, just as Waffle does.
- */
-static int32_t*
-concat_attrib_lists(const int32_t a[], const int32_t b[])
-{
-	int a_length = waffle_attrib_list_length(a);
-	int b_length = waffle_attrib_list_length(b);
-	int r_length = a_length + b_length;
-
-	/* +1 for the terminal 0. */
-	int r_size = (2 * r_length + 1) * sizeof(int32_t);
-
-	/* Don't copy the terminal 0.
-	 *
-	 * If a list is null, then the copy size is conveniently zero.
-	 */
-	int a_copy_size = 2 * a_length * sizeof(int32_t);
-	int b_copy_size = 2 * b_length * sizeof(int32_t);
-
-	int32_t *r = calloc(1, r_size);
-	memcpy(r, a, a_copy_size);
-	memcpy(r + 2 * a_length, b, b_copy_size);
-	r[2 * r_length] = 0;
-	return r;
-}
-
-/**
- * Return a human-readable description of the context specified by an \a
- * attrib_list suitable for waffle_config_choose(). At most \a bufsize bytes,
- * including the terminal null, are written to \a buf.
- */
-static void
-make_context_description(char buf[], size_t bufsize, const int32_t attrib_list[],
-			 enum context_flavor flavor)
-{
-	int32_t api = 0, profile = 0, major_version = 0, minor_version = 0,
-		fwd_compat = 0, debug = 0;
-	const char *api_str = NULL, *profile_str = NULL, *fwd_compat_str = NULL,
-	           *debug_str = NULL;
-
-	if (bufsize == 0) {
-		return;
-	}
-
-	waffle_attrib_list_get(attrib_list, WAFFLE_CONTEXT_API, &api);
-	waffle_attrib_list_get(attrib_list, WAFFLE_CONTEXT_PROFILE, &profile);
-	waffle_attrib_list_get(attrib_list, WAFFLE_CONTEXT_MAJOR_VERSION, &major_version);
-	waffle_attrib_list_get(attrib_list, WAFFLE_CONTEXT_MINOR_VERSION, &minor_version);
-	waffle_attrib_list_get(attrib_list, WAFFLE_CONTEXT_FORWARD_COMPATIBLE, &fwd_compat);
-	waffle_attrib_list_get(attrib_list, WAFFLE_CONTEXT_DEBUG, &debug);
-
-	switch (api) {
-	case WAFFLE_CONTEXT_OPENGL:
-		api_str = "OpenGL";
-		break;
-	case WAFFLE_CONTEXT_OPENGL_ES1:
-	case WAFFLE_CONTEXT_OPENGL_ES2:
-	case WAFFLE_CONTEXT_OPENGL_ES3:
-		api_str = "OpenGL ES";
-		break;
-	default:
-		assert(0);
-		break;
-	}
-
-	switch (profile) {
-	default:
-		assert(0);
-		break;
-	case WAFFLE_CONTEXT_CORE_PROFILE:
-		profile_str = "Core ";
-		break;
-	case WAFFLE_CONTEXT_COMPATIBILITY_PROFILE:
-		profile_str = "Compatibility ";
-		break;
-	case 0:
-		switch (flavor) {
-			default:
-				assert(0);
-				break;
-			case CONTEXT_GL_CORE:
-				profile_str = "Core ";
-				break;
-			case CONTEXT_GL_COMPAT:
-				profile_str = "Compatibility ";
-				break;
-			case CONTEXT_GL_ES:
-				profile_str = "";
-				break;
-		}
-		break;
-	}
-
-	if (fwd_compat) {
-		fwd_compat_str = "Forward-Compatible ";
-	} else {
-		fwd_compat_str = "";
-	}
-
-	if (debug) {
-		debug_str = "Debug ";
-	} else {
-		debug_str = "";
-	}
-
-	snprintf(buf, bufsize, "%s %d.%d %s%s%sContext",
-		api_str, major_version, minor_version, fwd_compat_str,
-		profile_str, debug_str);
-}
-
-/**
- * \brief Return a attribute list suitable for waffle_config_choose().
- *
- * The funcion deduces the values of WAFFLE_CONTEXT_API,
- * WAFFLE_CONTEXT_PROFILE, WAFFLE_CONTEXT_MAJOR_VERSION, and
- * WAFFLE_CONTEXT_MINOR_VERSION from the given context \a flavor and \a
- * test_config. The \a partial_attrib_list must not contain any of those
- * attributes. Any attributes in \a partial_attrib_list are added to the
- * returned attribute list.
- */
-static int32_t*
-make_config_attrib_list(const struct piglit_gl_test_config *test_config,
-              	        enum context_flavor flavor,
-              	        const int32_t partial_attrib_list[])
-{
-	int32_t head_attrib_list[64];
-	int32_t junk;
-	int i;
-
-	/* Derived class must not provide any context attributes. */
-	assert(waffle_attrib_list_get(partial_attrib_list, WAFFLE_CONTEXT_API, &junk) == false);
-	assert(waffle_attrib_list_get(partial_attrib_list, WAFFLE_CONTEXT_PROFILE, &junk) == false);
-	assert(waffle_attrib_list_get(partial_attrib_list, WAFFLE_CONTEXT_MAJOR_VERSION, &junk) == false);
-	assert(waffle_attrib_list_get(partial_attrib_list, WAFFLE_CONTEXT_MINOR_VERSION, &junk) == false);
-
-	switch (flavor) {
-		case CONTEXT_GL_CORE:
-			assert(test_config->supports_gl_core_version);
-
-			i = 0;
-			head_attrib_list[i++] = WAFFLE_CONTEXT_API;
-			head_attrib_list[i++] = WAFFLE_CONTEXT_OPENGL;
-
-			if (test_config->supports_gl_core_version >= 32) {
-				head_attrib_list[i++] = WAFFLE_CONTEXT_PROFILE;
-				head_attrib_list[i++] = WAFFLE_CONTEXT_CORE_PROFILE;
-			}
-
-			head_attrib_list[i++] = WAFFLE_CONTEXT_MAJOR_VERSION;
-			head_attrib_list[i++] = test_config->supports_gl_core_version / 10;
-
-			head_attrib_list[i++] = WAFFLE_CONTEXT_MINOR_VERSION;
-			head_attrib_list[i++] = test_config->supports_gl_core_version % 10;
-			break;
-
-		case CONTEXT_GL_COMPAT:
-			assert(test_config->supports_gl_compat_version);
-
-			i = 0;
-			head_attrib_list[i++] = WAFFLE_CONTEXT_API;
-			head_attrib_list[i++] = WAFFLE_CONTEXT_OPENGL;
-
-			head_attrib_list[i++] = WAFFLE_CONTEXT_MAJOR_VERSION;
-			head_attrib_list[i++] = test_config->supports_gl_compat_version / 10;
-
-			head_attrib_list[i++] = WAFFLE_CONTEXT_MINOR_VERSION;
-			head_attrib_list[i++] = test_config->supports_gl_compat_version % 10;
-			break;
-
-		case CONTEXT_GL_ES: {
-			int32_t waffle_context_api;
-			assert(test_config->supports_gl_es_version);
-
-			if (test_config->supports_gl_es_version < 40 &&
-			    test_config->supports_gl_es_version >= 30) {
-				waffle_context_api = WAFFLE_CONTEXT_OPENGL_ES3;
-			} else if (test_config->supports_gl_es_version >= 20) {
-				waffle_context_api = WAFFLE_CONTEXT_OPENGL_ES2;
-			} else if (test_config->supports_gl_es_version >= 10) {
-				waffle_context_api = WAFFLE_CONTEXT_OPENGL_ES1;
-			} else {
-				printf("piglit: error: config attribute "
-				       "'supports_gl_es_version' has "
-				       "bad value %d\n",
-				       test_config->supports_gl_es_version);
-				piglit_report_result(PIGLIT_FAIL);
-			}
-
-			i = 0;
-			head_attrib_list[i++] = WAFFLE_CONTEXT_API;
-			head_attrib_list[i++] = waffle_context_api;
-			head_attrib_list[i++] = WAFFLE_CONTEXT_MAJOR_VERSION;
-			head_attrib_list[i++] = test_config->supports_gl_es_version / 10;
-			head_attrib_list[i++] = WAFFLE_CONTEXT_MINOR_VERSION;
-			head_attrib_list[i++] = test_config->supports_gl_es_version % 10;
-			break;
-			}
-
-		default:
-			assert(0);
-			break;
-	}
-
-	if (test_config->require_forward_compatible_context) {
-		head_attrib_list[i++] = WAFFLE_CONTEXT_FORWARD_COMPATIBLE;
-		head_attrib_list[i++] = true;
-	}
-
-	if (test_config->require_debug_context) {
-		head_attrib_list[i++] = WAFFLE_CONTEXT_DEBUG;
-		head_attrib_list[i++] = true;
-	}
-
-	head_attrib_list[i++] = 0;
-	return concat_attrib_lists(head_attrib_list, partial_attrib_list);
-}
-
-/**
- * Check that the context's actual version no less than the requested
- * version for \a flavor.
- */
-static bool
-check_gl_version(const struct piglit_gl_test_config *test_config,
-                 enum context_flavor flavor,
-		 const char *context_description)
-{
-	switch (flavor) {
-	case CONTEXT_GL_CORE:
-	case CONTEXT_GL_ES:
-		/* There is no need to check the context version here, because
-		 * Piglit explicitly supplied the desired version to
-		 * waffle_config_choose().
-		 */
-		return true;
-	case CONTEXT_GL_COMPAT: {
-		int actual_version = piglit_get_gl_version();
-		if (actual_version >= test_config->supports_gl_compat_version)
-		   return true;
-
-		printf("piglit: info: Requested a %s, but actual context "
-		       "version is %d.%d\n",
-		       context_description,
-		       actual_version / 10,
-		       actual_version % 10);
-		return false;
-	}
-	default:
-		assert(0);
-		return false;
-	}
-}
-
-/**
  * \brief Handle requests for OpenGL 3.1 profiles.
  *
  * Strictly speaking, an OpenGL 3.1 context has no profile. (See the
@@ -392,63 +134,33 @@ check_gl_version(const struct piglit_gl_test_config *test_config,
  * [1] http://www.khronos.org/registry/egl/extensions/KHR/EGL_KHR_create_context.txt
  */
 static bool
-special_case_gl31(struct piglit_wfl_framework *wfl_fw,
+special_case_gl31(const struct piglit_gl_ctx_flavor *flavor,
+		  const char *ctx_flavor_name,
+		  int actual_version,
 		  const struct piglit_gl_test_config *test_config,
-		  enum context_flavor flavor,
-		  const char *context_description,
-		  const int32_t partial_config_attrib_list[])
+		  bool use_window_attribs,
+		  struct waffle_display *display,
+		  struct waffle_config **out_config,
+		  struct waffle_context **out_context,
+		  struct waffle_window **out_window)
 {
-	int requested_gl_version, actual_gl_version;
-	bool has_core_profile;
-	struct piglit_gl_test_config fallback_config = *test_config;
-	const char *error_verb = NULL;
+	const int requested_version = flavor->version;
+	const bool requested_core = (flavor->api == PIGLIT_GL_API_CORE);
+	struct piglit_gl_ctx_flavor fallback_flavor;
 
-	switch (flavor) {
-	case CONTEXT_GL_CORE:
-	     requested_gl_version = test_config->supports_gl_core_version;
-	     fallback_config.supports_gl_core_version = 32;
-	     error_verb = "exposes";
-	     break;
-	case CONTEXT_GL_COMPAT:
-	     requested_gl_version = test_config->supports_gl_compat_version;
-	     fallback_config.supports_gl_compat_version = 32;
-	     error_verb = "lacks";
-	     break;
-	case CONTEXT_GL_ES:
+	switch (flavor->api) {
+	case PIGLIT_GL_API_CORE:
+	case PIGLIT_GL_API_COMPAT:
+		if (requested_version != 31 || actual_version != 31) {
+			return true;
+		}
+		break;
+	case PIGLIT_GL_API_ES1:
+	case PIGLIT_GL_API_ES2:
 	     return true;
-	default:
-	     assert(false);
-	     return false;
 	}
 
-	if (requested_gl_version < 31) {
-		/* For context versions < 3.1, the GLX, EGL, and CGL specs
-		 * promise that the returned context will have the
-		 * compatibility profile.  So Piglit has no need to check the
-		 * profile here.
-		 */
-		assert(flavor == CONTEXT_GL_COMPAT);
-		return true;
-	}
-
-	actual_gl_version = piglit_get_gl_version();
-	assert(actual_gl_version >= 31);
-
-	if (actual_gl_version >= 32) {
-		/* For context versions >= 3.2, the GLX, EGL, and CGL specs
-		 * promise that the returned context will have the requested
-		 * profile.  So Piglit has no need to check the profile here.
-		 */
-		piglit_logd("Requested an %s, and received a matching "
-			    "%d.%d context\n", context_description,
-			    actual_gl_version / 10, actual_gl_version % 10);
-		return true;
-	}
-
-	has_core_profile = !piglit_is_extension_supported("GL_ARB_compatibility");
-	if (flavor == CONTEXT_GL_CORE && has_core_profile) {
-		return true;
-	} else if (flavor == CONTEXT_GL_COMPAT && !has_core_profile) {
+	if (requested_core == !piglit_is_extension_supported("GL_ARB_compatibility")) {
 		return true;
 	}
 
@@ -457,63 +169,135 @@ special_case_gl31(struct piglit_wfl_framework *wfl_fw,
 		    "GL_ARB_compatibility extension. Fallback to requesting a "
 		    "3.2 context, which is guaranteed to have the correct "
 		    "profile if context creation succeeds.",
-		    context_description, error_verb);
+		    ctx_flavor_name, requested_core ? "exposes" : "lacks");
 
-	waffle_config_destroy(wfl_fw->config);
-	waffle_context_destroy(wfl_fw->context);
-	waffle_window_destroy(wfl_fw->window);
-	wfl_fw->config = NULL;
-	wfl_fw->context = NULL;
-	wfl_fw->window = NULL;
+	fallback_flavor = *flavor;
+	fallback_flavor.version = 32;
 
-	return make_context_current_singlepass(
-			wfl_fw, &fallback_config, flavor,
-			partial_config_attrib_list);
+	waffle_config_destroy(*out_config);
+	waffle_context_destroy(*out_context);
+	waffle_window_destroy(*out_window);
+
+	return setup_gl(&fallback_flavor, test_config, use_window_attribs,
+			display, out_config, out_context, out_window);
 }
 
 static bool
-make_context_current_singlepass(struct piglit_wfl_framework *wfl_fw,
-                                const struct piglit_gl_test_config *test_config,
-                                enum context_flavor flavor,
-                                const int32_t partial_config_attrib_list[])
+setup_gl(const struct piglit_gl_ctx_flavor *flavor,
+	 const struct piglit_gl_test_config *test_config,
+	 bool use_window_attribs,
+	 struct waffle_display *display,
+	 struct waffle_config **out_config,
+	 struct waffle_context **out_context,
+	 struct waffle_window **out_window)
 {
-	bool ok;
-	int32_t *attrib_list = NULL;
-	char ctx_desc[1024];
+	char flavor_name[1024];
+	int32_t config_attribs[128];
+	int i = 0, window_visual = 0, window_samples = 0, actual_version = 0;
 
-	assert(wfl_fw->config == NULL);
-	assert(wfl_fw->context == NULL);
-	assert(wfl_fw->window == NULL);
+	*out_config = NULL;
+	*out_context = NULL;
+	*out_window = NULL;
 
-	attrib_list = make_config_attrib_list(test_config, flavor,
-					      partial_config_attrib_list);
-	assert(attrib_list);
-	make_context_description(ctx_desc, sizeof(ctx_desc),
-				 attrib_list, flavor);
-	wfl_fw->config = waffle_config_choose(wfl_fw->display, attrib_list);
-	free(attrib_list);
-	if (!wfl_fw->config) {
+	piglit_gl_ctx_flavor_get_name(flavor_name, sizeof(flavor_name),
+				      flavor);
+
+	#define APPEND(key, value) \
+		do { \
+			config_attribs[i++] = key; \
+			config_attribs[i++] = value; \
+		} while (0)
+
+	if (use_window_attribs) {
+		window_visual = test_config->window_visual;
+		window_samples = test_config->window_samples;
+	}
+
+	switch (flavor->api) {
+	case PIGLIT_GL_API_CORE:
+		APPEND(WAFFLE_CONTEXT_API, WAFFLE_CONTEXT_OPENGL);
+		assert(flavor->version >= 31);
+		if (flavor->version >= 32) {
+			APPEND(WAFFLE_CONTEXT_PROFILE,
+			       WAFFLE_CONTEXT_CORE_PROFILE);
+		}
+		break;
+	case PIGLIT_GL_API_COMPAT:
+		APPEND(WAFFLE_CONTEXT_API, WAFFLE_CONTEXT_OPENGL);
+		if (flavor->version >= 32) {
+			APPEND(WAFFLE_CONTEXT_PROFILE,
+			       WAFFLE_CONTEXT_COMPATIBILITY_PROFILE);
+		}
+		break;
+	case PIGLIT_GL_API_ES1:
+		APPEND(WAFFLE_CONTEXT_API, WAFFLE_CONTEXT_OPENGL_ES1);
+		break;
+	case PIGLIT_GL_API_ES2:
+		if (flavor->version >= 30) {
+			APPEND(WAFFLE_CONTEXT_API, WAFFLE_CONTEXT_OPENGL_ES3);
+		} else {
+			APPEND(WAFFLE_CONTEXT_API, WAFFLE_CONTEXT_OPENGL_ES2);
+		}
+		break;
+	}
+
+	APPEND(WAFFLE_CONTEXT_MAJOR_VERSION, flavor->version / 10);
+	APPEND(WAFFLE_CONTEXT_MINOR_VERSION, flavor->version % 10);
+
+	if (flavor->fwd_compat) {
+		APPEND(WAFFLE_CONTEXT_FORWARD_COMPATIBLE, true);
+	}
+	if (flavor->debug) {
+		APPEND(WAFFLE_CONTEXT_DEBUG, true);
+	}
+	if (window_visual & (PIGLIT_GL_VISUAL_RGB | PIGLIT_GL_VISUAL_RGBA)) {
+		APPEND(WAFFLE_RED_SIZE, 1);
+		APPEND(WAFFLE_GREEN_SIZE, 1);
+		APPEND(WAFFLE_BLUE_SIZE, 1);
+	}
+	if (window_visual & PIGLIT_GL_VISUAL_RGBA) {
+		APPEND(WAFFLE_ALPHA_SIZE, 1);
+	}
+	if (window_visual & PIGLIT_GL_VISUAL_DEPTH) {
+		APPEND(WAFFLE_DEPTH_SIZE, 1);
+	}
+	if (window_visual & PIGLIT_GL_VISUAL_STENCIL) {
+		APPEND(WAFFLE_STENCIL_SIZE, 1);
+	}
+	if (!(window_visual & PIGLIT_GL_VISUAL_DOUBLE)) {
+		APPEND(WAFFLE_DOUBLE_BUFFERED, false);
+	}
+	if (window_visual & PIGLIT_GL_VISUAL_ACCUM) {
+		APPEND(WAFFLE_ACCUM_BUFFER, true);
+	}
+	if (window_samples > 1) {
+		APPEND(WAFFLE_SAMPLE_BUFFERS, 1);
+		APPEND(WAFFLE_SAMPLES, window_samples);
+	}
+
+	config_attribs[i++] = 0;
+	#undef APPEND
+
+	*out_config = waffle_config_choose(display, config_attribs);
+	if (!*out_config) {
 		wfl_log_error("waffle_config_choose");
-		fprintf(stderr, "piglit: error: Failed to create "
-			"waffle_config for %s\n", ctx_desc);
+		piglit_loge("failed to create waffle_config for %s",
+			    flavor_name);
 		goto fail;
 	}
 
-	wfl_fw->context = waffle_context_create(wfl_fw->config, NULL);
-	if (!wfl_fw->context) {
+	*out_context = waffle_context_create(*out_config, NULL);
+	if (!*out_context) {
 		wfl_log_error("waffle_context_create");
-		fprintf(stderr, "piglit: error: Failed to create "
-			"waffle_context for %s\n", ctx_desc);
+		piglit_loge("failed to create waffle_context for %s",
+			    flavor_name);
 		goto fail;
 	}
 
-	wfl_fw->window = wfl_checked_window_create(wfl_fw->config,
-	                                           test_config->window_width,
-	                                           test_config->window_height);
-
-	wfl_checked_make_current(wfl_fw->display,
-	                         wfl_fw->window,
-	                         wfl_fw->context);
+	*out_window = wfl_checked_window_create(*out_config,
+	                                        test_config->window_width,
+	                                        test_config->window_height);
+	wfl_checked_make_current(display, *out_window, *out_context);
 
 #ifdef PIGLIT_USE_OPENGL
 	piglit_dispatch_default_init(PIGLIT_DISPATCH_GL);
@@ -525,82 +309,30 @@ make_context_current_singlepass(struct piglit_wfl_framework *wfl_fw,
 #	error
 #endif
 
-	ok = check_gl_version(test_config, flavor, ctx_desc);
-	if (!ok)
-	   goto fail;
-
-	ok = special_case_gl31(wfl_fw, test_config, flavor, ctx_desc,
-			       partial_config_attrib_list);
-	if (!ok)
+	actual_version = piglit_get_gl_version();
+	if (actual_version < flavor->version) {
+		piglit_loge("requested an %s, but actual context version is "
+			    "%d.%d", flavor_name,
+			    actual_version / 10, actual_version % 10);
 		goto fail;
+	}
 
+	if (!special_case_gl31(flavor, flavor_name, actual_version,
+			       test_config, use_window_attribs, display,
+			       out_config, out_context, out_window)) {
+		goto fail;
+	}
+
+	piglit_is_core_profile = (flavor->api == PIGLIT_GL_API_CORE);
 	return true;
 
 fail:
-	waffle_window_destroy(wfl_fw->window);
-	waffle_context_destroy(wfl_fw->context);
-	waffle_config_destroy(wfl_fw->config);
-
-	wfl_fw->window = NULL;
-	wfl_fw->context = NULL;
-	wfl_fw->config = NULL;
-
+	waffle_window_destroy(*out_window);
+	waffle_context_destroy(*out_context);
+	waffle_config_destroy(*out_config);
 	piglit_gl_reinitialize_extensions();
 
 	return false;
-}
-
-static void
-make_context_current(struct piglit_wfl_framework *wfl_fw,
-                     const struct piglit_gl_test_config *test_config,
-                     const int32_t partial_config_attrib_list[])
-{
-	bool ok = false;
-
-#if defined(PIGLIT_USE_OPENGL)
-
-	if (test_config->supports_gl_core_version) {
-		ok = make_context_current_singlepass(wfl_fw, test_config,
-		                                     CONTEXT_GL_CORE,
-		                                     partial_config_attrib_list);
-		if (ok) {
-			piglit_is_core_profile = true;
-			return;
-		}
-	}
-
-	if (test_config->supports_gl_core_version &&
-	    test_config->supports_gl_compat_version) {
-		/* The above attempt to create a core context failed. */
-		printf("piglit: info: Falling back to GL %d.%d "
-		       "compatibility context\n",
-		       test_config->supports_gl_compat_version / 10,
-		       test_config->supports_gl_compat_version % 10);
-        }
-
-	if (test_config->supports_gl_compat_version) {
-		ok = make_context_current_singlepass(wfl_fw, test_config,
-		                                     CONTEXT_GL_COMPAT,
-		                                     partial_config_attrib_list);
-		if (ok)
-		   return;
-	}
-
-#elif defined(PIGLIT_USE_OPENGL_ES1) || \
-      defined(PIGLIT_USE_OPENGL_ES2) || \
-      defined(PIGLIT_USE_OPENGL_ES3)
-	ok = make_context_current_singlepass(wfl_fw, test_config,
-	                                     CONTEXT_GL_ES,
-	                                     partial_config_attrib_list);
-
-	if (ok)
-		return;
-#else
-#	error
-#endif
-
-	printf("piglit: info: Failed to create any GL context\n");
-	piglit_report_result(PIGLIT_SKIP);
 }
 
 /**
@@ -635,7 +367,7 @@ bool
 piglit_wfl_framework_init(struct piglit_wfl_framework *wfl_fw,
 			  const struct piglit_gl_ctx_flavor *flavor,
                           const struct piglit_gl_test_config *test_config,
-                          const int32_t partial_config_attrib_list[])
+			  bool use_window_attribs)
 {
 	bool ok = true;
 
@@ -648,7 +380,11 @@ piglit_wfl_framework_init(struct piglit_wfl_framework *wfl_fw,
 		goto fail;
 
 	wfl_fw->display = wfl_checked_display_connect(NULL);
-	make_context_current(wfl_fw, test_config, partial_config_attrib_list);
+	ok = setup_gl(flavor, test_config, use_window_attribs,
+		      wfl_fw->display, &wfl_fw->config, &wfl_fw->context,
+		      &wfl_fw->window);
+	if (!ok)
+		goto fail;
 
 	return true;
 

@@ -99,60 +99,6 @@ post_redisplay(struct piglit_gl_framework *gl_fw)
 	piglit_winsys_framework(gl_fw)->need_redisplay = true;
 }
 
-static const int32_t*
-choose_config_attribs(const struct piglit_gl_test_config *test_config)
-{
-	static int32_t attrib_list[64];
-	int i = 0;
-
-
-	if (test_config->window_visual &
-	    (PIGLIT_GL_VISUAL_RGB | PIGLIT_GL_VISUAL_RGBA)) {
-		attrib_list[i++] = WAFFLE_RED_SIZE;
-		attrib_list[i++] = 1;
-		attrib_list[i++] = WAFFLE_GREEN_SIZE;
-		attrib_list[i++] = 1;
-		attrib_list[i++] = WAFFLE_BLUE_SIZE;
-		attrib_list[i++] = 1;
-	}
-
-	if (test_config->window_visual & PIGLIT_GL_VISUAL_RGBA) {
-		attrib_list[i++] = WAFFLE_ALPHA_SIZE;
-		attrib_list[i++] = 1;
-	}
-
-	if (test_config->window_visual & PIGLIT_GL_VISUAL_DEPTH) {
-		attrib_list[i++] = WAFFLE_DEPTH_SIZE;
-		attrib_list[i++] = 1;
-	}
-
-	if (test_config->window_visual & PIGLIT_GL_VISUAL_STENCIL) {
-		attrib_list[i++] = WAFFLE_STENCIL_SIZE;
-		attrib_list[i++] = 1;
-	}
-
-	if (!(test_config->window_visual & PIGLIT_GL_VISUAL_DOUBLE)) {
-		attrib_list[i++] = WAFFLE_DOUBLE_BUFFERED;
-		attrib_list[i++] = false;
-	}
-
-	if (test_config->window_visual & PIGLIT_GL_VISUAL_ACCUM) {
-		attrib_list[i++] = WAFFLE_ACCUM_BUFFER;
-		attrib_list[i++] = true;
-	}
-
-	if (test_config->window_samples > 1) {
-		attrib_list[i++] = WAFFLE_SAMPLE_BUFFERS;
-		attrib_list[i++] = 1;
-		attrib_list[i++] = WAFFLE_SAMPLES;
-		attrib_list[i++] = test_config->window_samples;
-	}
-
-	attrib_list[i++] = WAFFLE_NONE;
-
-	return attrib_list;
-}
-
 struct piglit_gl_framework*
 piglit_winsys_framework_create(const struct piglit_gl_ctx_flavor *flavor,
 			       const struct piglit_gl_test_config *test_config)
@@ -192,7 +138,7 @@ piglit_winsys_framework_init(struct piglit_winsys_framework *winsys_fw,
 	bool ok = true;
 
 	ok = piglit_wfl_framework_init(wfl_fw, flavor, test_config,
-				       choose_config_attribs(test_config));
+	                               true /*use_window_attribs*/);
 	if (!ok)
 		goto fail;
 
