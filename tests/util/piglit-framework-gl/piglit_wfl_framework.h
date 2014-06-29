@@ -51,7 +51,7 @@ bool
 piglit_wfl_framework_init(struct piglit_wfl_framework *wfl_fw,
 			  const struct piglit_gl_ctx_flavor *flavor,
                           const struct piglit_gl_test_config *test_config,
-                          const int32_t partial_config_attrib_list[]);
+			  bool use_window_attribs);
 
 void
 piglit_wfl_framework_teardown(struct piglit_wfl_framework *wfl_fw);
