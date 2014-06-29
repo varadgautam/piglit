@@ -88,6 +88,7 @@ piglit_gl_framework_create(const struct piglit_gl_ctx_flavor *flavor,
 
 bool
 piglit_gl_framework_init(struct piglit_gl_framework *gl_fw,
+			 const struct piglit_gl_ctx_flavor *flavor,
                          const struct piglit_gl_test_config *test_config);
 
 void

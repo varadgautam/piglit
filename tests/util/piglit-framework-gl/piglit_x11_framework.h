@@ -32,5 +32,6 @@ struct piglit_x11_framework*
 piglit_x11_framework(struct piglit_gl_framework *gl_fw);
 
 struct piglit_gl_framework*
-piglit_x11_framework_create(const struct piglit_gl_test_config *test_config,
+piglit_x11_framework_create(const struct piglit_gl_ctx_flavor *flavor,
+			    const struct piglit_gl_test_config *test_config,
 			    int32_t platform);
