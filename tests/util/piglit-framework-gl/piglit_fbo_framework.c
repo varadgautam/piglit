@@ -137,8 +137,6 @@ piglit_fbo_framework_create(const struct piglit_gl_ctx_flavor *flavor,
 #else
 	struct piglit_wfl_framework *wfl_fw;
 	struct piglit_gl_framework *gl_fw;
-
-	int32_t platform = piglit_wfl_framework_choose_platform(test_config);
 	bool ok = true;
 
 	if (test_config->window_samples > 1) {
@@ -149,8 +147,9 @@ piglit_fbo_framework_create(const struct piglit_gl_ctx_flavor *flavor,
 	wfl_fw = calloc(1, sizeof(*wfl_fw));
 	gl_fw = &wfl_fw->gl_fw;
 
-	ok = piglit_wfl_framework_init(wfl_fw, flavor, test_config,
-				       platform, NULL);
+	ok = piglit_wfl_framework_init(
+		wfl_fw, flavor, test_config,
+		piglit_wfl_framework_choose_platform(flavor), NULL);
 	if (!ok)
 		goto fail;
 

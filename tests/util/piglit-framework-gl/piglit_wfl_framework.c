@@ -47,13 +47,14 @@ piglit_wfl_framework(struct piglit_gl_framework *gl_fw)
 }
 
 int32_t
-piglit_wfl_framework_choose_platform(const struct piglit_gl_test_config *test_config)
+piglit_wfl_framework_choose_platform(const struct piglit_gl_ctx_flavor *flavor)
 {
 	const char *env = getenv("PIGLIT_PLATFORM");
 
 	if (env == NULL) {
 #if defined(PIGLIT_HAS_X11) && defined(PIGLIT_HAS_EGL)
-		if (test_config->supports_gl_es_version) {
+		if (flavor->api == PIGLIT_GL_API_ES1 ||
+		    flavor->api == PIGLIT_GL_API_ES2) {
 			/* Some GLX implementations don't support creation of
 			 * ES1 and ES2 contexts, so use XEGL instead.
 			 */
