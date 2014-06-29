@@ -34,6 +34,9 @@
  * instance.
  */
 struct piglit_gl_framework {
+	/** The context flavor currently being tested. */
+	const struct piglit_gl_ctx_flavor *ctx_flavor;
+
 	const struct piglit_gl_test_config *test_config;
 
 	/**

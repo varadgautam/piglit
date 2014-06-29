@@ -112,6 +112,7 @@ piglit_gl_framework_init(struct piglit_gl_framework *gl_fw,
 	gl_fw->destroy_dma_buf = piglit_drm_destroy_dma_buf;
 #endif
 
+	gl_fw->ctx_flavor = flavor;
 	gl_fw->test_config = test_config;
 	return true;
 }
