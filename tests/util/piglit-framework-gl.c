@@ -76,6 +76,146 @@ piglit_gl_context_flavor_name(char buf[], size_t size,
 		        fwd_compat, debug);
 }
 
+static void
+check_flavor_version(const char *api_name, int version, int min, int max)
+{
+	if (version >= min && version <= max) {
+		return;
+	}
+
+	piglit_loge("context flavor has invalid version (%d.%d) for the OpenGL "
+		    "%s API; version must be in range [%d.%d, %d.%d]",
+		    version / 10, version % 10, api_name,
+		    min / 10, min % 10,
+		    max / 10, max % 10);
+	piglit_report_result(PIGLIT_FAIL);
+}
+
+static void
+check_flavor_no_fwd_compat(const char *api_name, bool fwd_compat)
+{
+	if (!fwd_compat) {
+		return;
+	}
+
+	piglit_loge("context attribute \"Forward-Compatible\" is illegal for "
+		    "the OpenGL %s API", api_name);
+	piglit_report_result(PIGLIT_FAIL);
+}
+
+static void
+check_flavor_attrib_mask(int attrib_mask)
+{
+	static const int valid_attribs =
+		PIGLIT_GL_CONTEXT_DEBUG | PIGLIT_GL_CONTEXT_FORWARD_COMPAT;
+
+	if ((attrib_mask | valid_attribs) == valid_attribs) {
+		return;
+	}
+
+	piglit_loge("invalid attribute mask (0x0%x) for context flavor; "
+		    "allowed bits are 0x%x", attrib_mask, valid_attribs);
+	piglit_report_result(PIGLIT_FAIL);
+}
+
+
+/**
+ * Fail the test if the context flavor has invalid values.
+ */
+static void
+check_flavor(const struct piglit_gl_context_flavor *flavor)
+{
+	switch (flavor->api) {
+	case PIGLIT_GL_API_CORE:
+		check_flavor_version("Core", flavor->version, 31, 43);
+		break;
+	case PIGLIT_GL_API_COMPAT:
+		check_flavor_version("Compatibility", flavor->version, 10, 43);
+		if (flavor->version < 30) {
+			check_flavor_no_fwd_compat("Compatibility",
+						   flavor->fwd_compat);
+		}
+		break;
+	case PIGLIT_GL_API_ES1:
+		check_flavor_version("ES1", flavor->version, 10, 11);
+		check_flavor_no_fwd_compat("ES1", flavor->fwd_compat);
+		break;
+	case PIGLIT_GL_API_ES2:
+		check_flavor_version("ES2", flavor->version, 20, 31);
+		check_flavor_no_fwd_compat("ES2", flavor->fwd_compat);
+		break;
+	default:
+		piglit_loge("context flavor has invalid api (0x%x)",
+			    flavor->api);
+		piglit_report_result(PIGLIT_FAIL);
+		break;
+	}
+}
+
+static void
+piglit_gl_support_context(struct pgl_list *list,
+			  enum piglit_gl_api api,
+			  int version, int attrib_mask)
+{
+	struct piglit_gl_context_flavor *flavor;
+
+	flavor = malloc(sizeof(*flavor));
+	flavor->api = api;
+	flavor->version = version;
+	flavor->debug = attrib_mask & PIGLIT_GL_CONTEXT_DEBUG;
+	flavor->fwd_compat = attrib_mask & PIGLIT_GL_CONTEXT_FORWARD_COMPAT;
+
+	check_flavor_attrib_mask(attrib_mask);
+	check_flavor(flavor);
+
+	pgl_list_append(list, &flavor->link);
+}
+
+static void
+extract_context_flavors(struct pgl_list *list,
+			const struct piglit_gl_test_config *config)
+{
+	struct piglit_gl_context_flavor flavor = {0};
+	int attribs = 0;
+
+	assert(pgl_list_is_empty(list));
+
+	if (config->require_debug_context) {
+		attribs |= PIGLIT_GL_CONTEXT_DEBUG;
+	}
+
+	if (config->require_forward_compatible_context) {
+		attribs |= PIGLIT_GL_CONTEXT_FORWARD_COMPAT;
+	}
+
+	if (config->supports_gl_core_version > 0) {
+		piglit_gl_support_context(list, PIGLIT_GL_API_CORE,
+					  config->supports_gl_core_version,
+					  attribs);
+	}
+
+	if (config->supports_gl_compat_version > 0) {
+		piglit_gl_support_context(list, PIGLIT_GL_API_COMPAT,
+					  config->supports_gl_compat_version,
+					  attribs);
+	}
+
+	if (config->supports_gl_es_version >= 20) {
+		piglit_gl_support_context(list, PIGLIT_GL_API_ES2,
+					  config->supports_gl_es_version,
+					  attribs);
+	} else if (config->supports_gl_es_version > 0) {
+		piglit_gl_support_context(list, PIGLIT_GL_API_ES1,
+					  config->supports_gl_es_version,
+					  attribs);
+	}
+
+	if (pgl_list_is_empty(list)) {
+		piglit_loge("test declares support for no context flavor");
+		piglit_report_result(PIGLIT_FAIL);
+	}
+}
+
 void
 piglit_gl_test_config_init(struct piglit_gl_test_config *config)
 {
@@ -167,22 +307,61 @@ piglit_gl_process_args(int *argc, char *argv[],
 
 }
 
+static bool
+build_accepts_flavor(const struct piglit_gl_context_flavor *flavor)
+{
+	switch (flavor->api) {
+	case PIGLIT_GL_API_CORE:
+	case PIGLIT_GL_API_COMPAT:
+		#ifdef PIGLIT_USE_OPENGL
+			return true;
+		#else
+			return false;
+		#endif
+	case PIGLIT_GL_API_ES1:
+		#ifdef PIGLIT_USE_OPENGL_ES1
+			return true;
+		#else
+			return false;
+		#endif
+	case PIGLIT_GL_API_ES2:
+		#if defined(PIGLIT_USE_OPENGL_ES2)
+			return flavor->version < 30;
+		#elif defined(PIGLIT_USE_OPENGL_ES3)
+			return true;
+		#else
+			return false;
+		#endif
+	}
+}
+
 void
 piglit_gl_test_run(int argc, char *argv[],
 		   const struct piglit_gl_test_config *config)
 {
+	struct pgl_list ctx_flavors;
+	const struct piglit_context_gl_flavor *flavor;
+
+	pgl_list_init(&ctx_flavors);
+	extract_context_flavors(&ctx_flavors, config);
+
 	piglit_width = config->window_width;
 	piglit_height = config->window_height;
 
-	gl_fw = piglit_gl_framework_create(config);
-	if (gl_fw == NULL) {
-		printf("piglit: error: failed to create "
-		       "piglit_gl_framework\n");
-		piglit_report_result(PIGLIT_FAIL);
+	pgl_list_for_each(&ctx_flavors, flavor, link) {
+		if (!build_accepts_flavor(flavor)) {
+			continue;
+		}
+
+		gl_fw = piglit_gl_framework_create(flavor, config);
+		if (gl_fw) {
+			gl_fw->run_test(gl_fw, argc, argv);
+			return;
+		}
 	}
 
-	gl_fw->run_test(gl_fw, argc, argv);
-	assert(false);
+	piglit_loge("failed to create piglit_gl_framework");
+	piglit_report_result(PIGLIT_FAIL);
 }
 
 void

@@ -39,9 +39,13 @@
 #endif
 
 struct piglit_gl_framework*
-piglit_gl_framework_create(const struct piglit_gl_test_config *test_config)
+piglit_gl_framework_create(const struct piglit_gl_context_flavor *ctx_flavor,
+			   const struct piglit_gl_test_config *test_config)
 {
 	struct piglit_gl_framework *gl_fw = NULL;
+
+	/* FINISHME: Use the context flavor. */
+	(void) ctx_flavor;
 
 #ifdef PIGLIT_USE_WAFFLE
 	if (piglit_use_fbo) {
