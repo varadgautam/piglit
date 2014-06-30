@@ -55,6 +55,6 @@ class GleanTest(exectest.Test):
 
     def is_skip(self):
         # Glean tests require glx
-        if exectest.PIGLIT_PLATFORM != 'glx':
+        if not self.OPTS.has_glx:
             return True
         return super(GleanTest, self).is_skip()

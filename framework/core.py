@@ -75,6 +75,9 @@ class Options(object):
     env -- environment variables set for each test before run
 
     """
+
+    DEFAULT_PLATFORM = 'gl=>glx,gles=>xegl'
+
     def __init__(self, concurrent=True, execute=True, include_filter=None,
                  exclude_filter=None, valgrind=False, dmesg=False,
                  verbose=False):
@@ -93,6 +96,8 @@ class Options(object):
             'PIGLIT_SOURCE_DIR': os.path.abspath(
                 os.path.join(os.path.dirname(__file__), '..')),
             'MESA_DEBUG': 'silent',
+            'PIGLIT_PLATFORM': os.environ.get('PIGLIT_PLATFORM',
+                                              Options.DEFAULT_PLATFORM),
         }
 
     def __iter__(self):
@@ -104,6 +109,10 @@ class Options(object):
                 yield (key, [x.pattern for x in values])
             else:
                 yield (key, values)
+
+    @property
+    def has_glx(self):
+        return 'glx' in self.env['PIGLIT_PLATFORM']
 
 
 def collect_system_info():

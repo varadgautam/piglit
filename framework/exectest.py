@@ -300,10 +300,9 @@ class PiglitTest(Test):
     def is_skip(self):
         """ Native Piglit-test specific skip checking
 
-        If we are running on gbm don't run glean or glx- tests
-
+        Don't run GLX tests if we don't have GLX.
         """
-        if PIGLIT_PLATFORM != 'glx':
+        if not self.OPTS.has_glx:
             split_command = os.path.split(self._command[0])[1]
             if split_command.startswith('glx'):
                 return True
