@@ -167,7 +167,7 @@ class Test(object):
 
         if self.is_skip():
             self.result['result'] = 'skip'
-            self.result['out'] = ""
+            self.result['out'] = "skipped by self.is_skip()"
             self.result['err'] = ""
             self.result['returncode'] = None
             return
