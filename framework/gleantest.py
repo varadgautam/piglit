@@ -22,18 +22,19 @@
 # DEALINGS IN THE SOFTWARE.
 
 import os
-
 import framework.exectest as exectest
 
 glean_executable = os.path.join(exectest.TEST_BIN_DIR, "glean")
+
 
 # GleanTest: Execute a sub-test of Glean
 class GleanTest(exectest.Test):
     globalParams = []
 
     def __init__(self, name, **kwargs):
-        super(GleanTest, self).__init__([glean_executable, "-o", "-v", "-v",
-                                       "-v", "-t", "+" + name])
+        super(GleanTest, self).__init__(
+            [glean_executable, "-o", "-v", "-v", "-v", "-t", "+" + name],
+            **kwargs)
 
     @exectest.Test.command.getter
     def command(self):
