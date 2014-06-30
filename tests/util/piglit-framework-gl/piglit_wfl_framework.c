@@ -89,7 +89,7 @@ piglit_wfl_framework_choose_platform(const struct piglit_gl_test_config *test_co
 #endif
 	}
 
-	else if (streq(env, "x11_egl")) {
+	else if (streq(env, "x11_egl") || streq("xegl")) {
 #if defined(PIGLIT_HAS_X11) && defined(PIGLIT_HAS_EGL)
 		return WAFFLE_PLATFORM_X11_EGL;
 #else
