@@ -291,13 +291,11 @@ class PiglitTest(Test):
         If we are running on gbm don't run glean or glx- tests
 
         """
-        if PIGLIT_PLATFORM == 'gbm':
+        if PIGLIT_PLATFORM != 'glx':
             split_command = os.path.split(self._command[0])[1]
-            if 'glean' == split_command:
+            if split_command.startswith('glx'):
                 return True
-            if split_command.startswith('glx-'):
-                return True
-        return False
+        return super(PiglitTest, self).is_skip()
 
     def interpret_result(self):
         outlines = self.result['out'].split('\n')
