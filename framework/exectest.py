@@ -75,9 +75,12 @@ class Test(object):
     run_concurrent -- If True the test is thread safe. Default: False
 
     """
-    OPTS = Options()
     __slots__ = ['run_concurrent', 'env', 'result', 'cwd', '_command',
                  '_test_hook_execute_run']
+
+    OPTS = Options()
+    _VALGRIND_CMD = ['valgrind', '--quiet', '--error-exitcode=1',
+                     '--tool=memcheck']
 
     def __init__(self, command, run_concurrent=False):
         self._command = None
@@ -136,8 +139,7 @@ class Test(object):
     def command(self):
         assert self._command
         if self.OPTS.valgrind:
-            return ['valgrind', '--quiet', '--error-exitcode=1',
-                    '--tool=memcheck'] + self._command
+            return self._VALGRIND_CMD + self._command
         return self._command
 
     @command.setter

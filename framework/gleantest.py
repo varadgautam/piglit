@@ -34,16 +34,18 @@ class GleanTest(exectest.Test):
 
     """
     GLOBAL_PARAMS = []
-    _EXECUTABLE = os.path.join(exectest.TEST_BIN_DIR, "glean")
+    _EXECUTABLE = [os.path.join(exectest.TEST_BIN_DIR, "glean"),
+                   "-o", "-v", "-v", "-v", "-t"]
 
     def __init__(self, name, **kwargs):
-        super(GleanTest, self).__init__(
-            [self._EXECUTABLE, "-o", "-v", "-v", "-v", "-t", "+" + name],
-            **kwargs)
+        super(GleanTest, self).__init__(['+' + name], **kwargs)
 
     @exectest.Test.command.getter
     def command(self):
-        return super(GleanTest, self).command + self.GLOBAL_PARAMS
+        if self.OPTS.valgrind:
+            return self._VALGRIND_CMD + self._EXECUTABLE + \
+                self._command + self.GLOBAL_PARAMS
+        return self._EXECUTABLE + self._command + self.GLOBAL_PARAMS
 
     def interpret_result(self):
         if self.result['returncode'] != 0 or 'FAIL' in self.result['out']:
