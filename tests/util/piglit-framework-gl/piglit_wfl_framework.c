@@ -51,7 +51,7 @@ piglit_wfl_framework_choose_platform(const struct piglit_gl_test_config *test_co
 {
 	const char *env = getenv("PIGLIT_PLATFORM");
 
-	if (env == NULL) {
+	if (env == NULL || streq("gl=>glx,gles=>xegl")) {
 #if defined(PIGLIT_HAS_X11) && defined(PIGLIT_HAS_EGL)
 		if (test_config->supports_gl_es_version) {
 			/* Some GLX implementations don't support creation of
