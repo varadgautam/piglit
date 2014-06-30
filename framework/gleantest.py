@@ -49,4 +49,4 @@ class GleanTest(exectest.Test):
         # Glean tests require glx
         if exectest.PIGLIT_PLATFORM != 'glx':
             return True
-        super(GleanTest, self).is_skip()
+        return super(GleanTest, self).is_skip()
