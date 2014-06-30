@@ -44,3 +44,9 @@ class GleanTest(exectest.Test):
             self.result['result'] = 'fail'
         else:
             self.result['result'] = 'pass'
+
+    def is_skip(self):
+        # Glean tests require glx
+        if exectest.PIGLIT_PLATFORM != 'glx':
+            return True
+        super(GleanTest, self).is_skip()
