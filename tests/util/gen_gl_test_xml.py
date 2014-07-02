@@ -26,39 +26,22 @@ TODO(chadv): comment
 from __future__ import print_function
 
 import argparse
+import os
 import re
 
 # Prefer the external module 'lxml.etree' (it uses libxml2) over Python's
 # builtin 'xml.etree.ElementTree'.  It's faster.
-try:
-    import lxml.etree as etree
-except ImportError:
-    import xml.etree.cElementTree as etree
+#try:
+#    import lxml.etree as etree
+#except ImportError:
+#    import xml.etree.cElementTree as etree
+
+import xml.etree.cElementTree as etree
 
 
-def main():
-    argparser = argparse.ArgumentParser()
-    argparser.add_argument('c_file')
-    args = argparser.parse_args()
+class ConfigBlock(object):
 
-    with open(args.c_file, 'r') as c_file:
-        gen_xml(c_file)
-
-def gen_xml(c_file):
-    config_re = make_config_regex()
-
-    config_data = dict()
-    has_begun = False
-    has_ended = False
-
-    for line in c_file:
-        match = config_re.search(line)
-        if match is None:
-            continue
-        print(match.groups())
-
-def make_config_regex():
-    config_regex = '|'.join([
+    REGEX = '|'.join([
         r'(?P<begin>PIGLIT_GL_TEST_CONFIG_BEGIN)',
         r'(config.supports_gl_core_version = (?P<core_version>\d+);)',
         r'(config.supports_gl_compat_version = (?P<compat_version>\d+);)',
@@ -78,9 +61,100 @@ def make_config_regex():
         r'(?P<window_stencil>\bPIGLIT_GL_VISUAL_STENCIL\b)',
         r'(?P<end>PIGLIT_GL_TEST_CONFIG_END)',
     ])
-    config_regex = '(' + config_regex + ')+'
-    config_regex = re.compile(config_regex, re.UNICODE)
-    return config_regex
+    REGEX = '(' + REGEX + ')+'
+    REGEX = re.compile(REGEX, re.UNICODE)
+
+    @staticmethod
+    def from_file(c_file):
+        self = ConfigBlock()
+
+        found_begin = False
+        found_end = False
+
+        for line in c_file:
+            match = ConfigBlock.REGEX.search(line)
+            if match is None:
+                continue
+
+            for (key, value) in match.groupdict().iteritems():
+                if value is None:
+                    continue
+
+                if key in self:
+                    raise Exception('config block has multiple occurences of {0!r}'.format(key))
+
+                if not found_begin and key != 'begin':
+                    raise Exception('found config data {0!r} PIGLIT_GL_TEST_CONFIG_BEGIN'.format(key))
+
+                if key == 'begin':
+                    found_begin = True
+                elif key == 'end':
+                    found_end = True
+                elif key.endswith('version'):
+                    setattr(self, key, value)
+                elif key in ('window_width', 'window_height'):
+                    setattr(self, key, value)
+                else:
+                    setattr(self, key, True)
+
+        if not found_begin:
+            raise Exception('failed to find PIGLIT_GL_TEST_CONFIG_BEGIN')
+
+        if not found_end:
+            raise Exception('failed to find PIGLIT_GL_TEST_CONFIG_END')
+
+        return self
+
+    def __init__(self):
+        self.core_version = 0
+        self.compat_version = 0
+        self.es1_version = 0
+        self.es2_version = 0
+
+        self.require_fwd_compat = False
+        self.require_debug = False
+        self.require_displayed_window = False
+
+        self.window_width = 0
+        self.window_height = 0
+
+        self.window_accum = False
+        self.window_depth = False
+        self.window_double = False
+        self.window_rgb = False
+        self.window_rgbs = False
+        self.window_stencil = False
+
+    def get_xml(self):
+        b = etree.TreeBuilder()
+
+        b.start('piglit')
+        b.start('gl-test')
+        b.end('gl-test')
+        b.end('piglit')
+
+        return b.close()
+
+def main():
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('c_file')
+    args = argparser.parse_args()
+
+    print(args)
+
+    c_filename = args.c_file
+    (basename, ext) = os.path.splitext(os.path.basename(c_filename))
+    xml_filename = basename + '.xml'
+
+    c_file = open(c_filename, 'r')
+    xml_file = open(xml_filename, 'w')
+
+    config = ConfigBlock.from_file(c_file)
+    xml = config.get_xml()
+    print(xml)
+
+    c_file.close()
+    xml_file.close()
 
 if __name__ == '__main__':
     main()
