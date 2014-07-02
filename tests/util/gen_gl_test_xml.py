@@ -70,6 +70,7 @@ class ConfigBlock(object):
 
         found_begin = False
         found_end = False
+        found_keys = set()
 
         for line in c_file:
             match = ConfigBlock.REGEX.search(line)
@@ -80,11 +81,13 @@ class ConfigBlock(object):
                 if value is None:
                     continue
 
-                if key in self:
+                if key in found_keys:
                     raise Exception('config block has multiple occurences of {0!r}'.format(key))
 
                 if not found_begin and key != 'begin':
                     raise Exception('found config data {0!r} PIGLIT_GL_TEST_CONFIG_BEGIN'.format(key))
+
+                found_keys.add(key)
 
                 if key == 'begin':
                     found_begin = True
@@ -128,10 +131,20 @@ class ConfigBlock(object):
     def get_xml(self):
         b = etree.TreeBuilder()
 
-        b.start('piglit')
-        b.start('gl-test')
-        b.end('gl-test')
-        b.end('piglit')
+        piglit = b.start('piglit')
+        gl_test = b.start('gl-test')
+        if self.core_version:
+            ctx_flavor = b.start('context-flavor')
+            ctx_flavor.attrs['api'] = 'core'
+            ctx_flavor.attrs['version'] = self.core_version
+            ctx_flavor.end()
+        if self.compat_version:
+            ctx_flavor = b.start('context-flavor')
+            ctx_flavor.set('api', 'compat')
+            ctx_flavor.set('version', self.compat_version)
+            b.end(ctx_flavor)
+        b.end(gl_test)
+        b.end(piglit)
 
         return b.close()
 
@@ -151,7 +164,7 @@ def main():
 
     config = ConfigBlock.from_file(c_file)
     xml = config.get_xml()
-    print(xml)
+    print(etree.tostring(xml))
 
     c_file.close()
     xml_file.close()
