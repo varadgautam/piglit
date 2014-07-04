@@ -302,6 +302,12 @@ if (OPENGL_FOUND)
 	endif (APPLE)
 endif()
 
+check_c_source_compiles(
+	# GCC and Clang provide __builtin_types_compatible_p().
+	"int main() { return __builtin_types_compatible_p(int, int); }"
+	HAVE_BUILTIN_TYPES_COMPATIBLE_P
+)
+
 FIND_LIBRARY(HAVE_LIBRT NAMES rt)
 if(HAVE_LIBRT)
 	set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} rt)
