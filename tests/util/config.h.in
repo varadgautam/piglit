@@ -1,5 +1,6 @@
 #cmakedefine HAVE_BUILTIN_TYPES_COMPATIBLE_P
 #cmakedefine HAVE_TYPEOF
+#cmakedefine HAVE_ZERO_SIZED_ARRAYS
 
 #cmakedefine HAVE_ASPRINTF
 #cmakedefine HAVE_FFS
