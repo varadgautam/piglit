@@ -318,6 +318,23 @@ check_c_source_compiles(
 	HAVE_TYPEOF
 )
 
+check_c_source_compiles(
+	"
+	#define STATIC_ASSERT(cond) \\\\
+		((void) sizeof(int[2 - 1 * !(cond)]))
+
+	int fake_array[0][13];
+
+	int main() {
+		STATIC_ASSERT(sizeof(fake_array) == 0);
+		STATIC_ASSERT(sizeof(fake_array[0]) == 13 * sizeof(int));
+		STATIC_ASSERT(sizeof(fake_array[0][0]) == sizeof(int));
+		return 0;
+	}
+	"
+	HAVE_ZERO_SIZED_ARRAYS
+)
+
 FIND_LIBRARY(HAVE_LIBRT NAMES rt)
 if(HAVE_LIBRT)
 	set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} rt)
