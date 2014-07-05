@@ -308,6 +308,16 @@ check_c_source_compiles(
 	HAVE_BUILTIN_TYPES_COMPATIBLE_P
 )
 
+check_c_source_compiles(
+	"
+	int main(int argc, char **argv) {
+		__typeof__(argc) i = argc;
+		return i;
+	}
+	"
+	HAVE_TYPEOF
+)
+
 FIND_LIBRARY(HAVE_LIBRT NAMES rt)
 if(HAVE_LIBRT)
 	set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} rt)
