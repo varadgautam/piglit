@@ -82,6 +82,8 @@ struct piglit_gl_ctx_flavor {
 
 	bool debug; /**< \see PIGLIT_GL_CTX_DEBUG */
 	bool fwd_compat; /**< \see PIGLIT_GL_CTX_FORWARD_COMPATIBLE */
+
+	struct pgl_list_link link;
 };
 
 /**

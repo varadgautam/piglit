@@ -29,6 +29,7 @@
 extern "C" {
 #endif
 
+#include "piglit-list.h"
 #include "piglit-util.h"
 
 #include <piglit/gl_wrap.h>
