@@ -120,6 +120,11 @@ struct piglit_gl_test_config {
 	/**
 	 * List of context flavors supported by the test. Type of list element
 	 * is `struct piglit_gl_ctx_flavor`.
+	 *
+	 * If the list is not empty. then the following fields are ignored:
+	 *   - supports_gl_es_version
+	 *   - supports_gl_core_version
+	 *   - supports_gl_compat_version
 	 */
 	struct pgl_list supported_ctx_flavors;
 

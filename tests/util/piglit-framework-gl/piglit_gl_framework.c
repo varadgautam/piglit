@@ -61,50 +61,11 @@ piglit_gl_framework_create(const struct piglit_gl_ctx_flavor *flavor,
 	return gl_fw;
 }
 
-static void
-validate_supported_apis(const struct piglit_gl_test_config *test_config)
-{
-	if (!test_config->supports_gl_core_version &&
-	    !test_config->supports_gl_compat_version &&
-	    !test_config->supports_gl_es_version) {
-		printf("The test config supports no GL API's.\n");
-		piglit_report_result(PIGLIT_FAIL);
-	}
-
-	if (test_config->supports_gl_core_version > 0 &&
-	    test_config->supports_gl_core_version < 31) {
-		printf("Config attribute 'supports_gl_core_version' is %d, "
-		       "but must be either 0 or at least 31\n",
-		       test_config->supports_gl_core_version);
-		piglit_report_result(PIGLIT_FAIL);
-	}
-
-#if defined(PIGLIT_USE_OPENGL)
-	if (!test_config->supports_gl_core_version
-	    && !test_config->supports_gl_compat_version) {
-		printf("Neither config attribute 'supports_gl_core_version' "
-		       "nor 'supports_gl_compat_version' is set\n");
-		piglit_report_result(PIGLIT_SKIP);
-	}
-#elif defined(PIGLIT_USE_OPENGL_ES1) || \
-      defined(PIGLIT_USE_OPENGL_ES2) || \
-      defined(PIGLIT_USE_OPENGL_ES3)
-	if (!test_config->supports_gl_es_version) {
-		printf("Config attribute 'supports_gl_es_version' is not "
-		       "set\n");
-		piglit_report_result(PIGLIT_SKIP);
-	}
-#else
-#	error
-#endif
-}
-
 bool
 piglit_gl_framework_init(struct piglit_gl_framework *gl_fw,
 			 const struct piglit_gl_ctx_flavor *flavor,
                          const struct piglit_gl_test_config *test_config)
 {
-	validate_supported_apis(test_config);
 	memset(gl_fw, 0, sizeof(*gl_fw));
 
 #ifdef HAVE_LIBDRM
