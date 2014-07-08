@@ -75,6 +75,69 @@ piglit_gl_ctx_flavor_get_name(char name[], size_t size,
 		        api, flavor->version / 10, flavor->version % 10,
 		        fwd_compat, debug);
 }
+static bool
+flavor_version_in_range(const char *api_name, int version, int min, int max)
+{
+	if (version >= min && version <= max) {
+		return true;
+	}
+
+	piglit_logd("context flavor has invalid version (%d.%d) for the OpenGL "
+		    "%s API; version must be in range [%d.%d, %d.%d]",
+		    version / 10, version % 10, api_name,
+		    min / 10, min % 10,
+		    max / 10, max % 10);
+	return false;
+}
+
+/**
+ * Is the context flavor forward-compatible?
+ */
+static bool
+flavor_is_not_fwd_compat(const char *api_name, bool fwd_compat)
+{
+	if (!fwd_compat) {
+		return true;
+	}
+
+	piglit_logd("context attribute \"Forward-Compatible\" is illegal for "
+		    "the OpenGL %s API", api_name);
+	return false;
+}
+
+bool
+piglit_gl_ctx_flavor_is_valid(const struct piglit_gl_ctx_flavor *flavor)
+{
+	bool ok = true;
+
+	switch (flavor->api) {
+	case PIGLIT_GL_API_CORE:
+		ok &= flavor_version_in_range("Core", flavor->version, 31, 43);
+		break;
+	case PIGLIT_GL_API_COMPAT:
+		ok &= flavor_version_in_range("Compatibility",
+					      flavor->version, 10, 43);
+		ok &= flavor->version >= 30
+		      || flavor_is_not_fwd_compat("Compatibility",
+					          flavor->fwd_compat);
+		break;
+	case PIGLIT_GL_API_ES1:
+		ok &= flavor_version_in_range("ES1", flavor->version, 10, 11);
+		ok &= flavor_is_not_fwd_compat("ES1", flavor->fwd_compat);
+		break;
+	case PIGLIT_GL_API_ES2:
+		ok &= flavor_version_in_range("ES2", flavor->version, 20, 31);
+		ok &= flavor_is_not_fwd_compat("ES2", flavor->fwd_compat);
+		break;
+	default:
+		piglit_loge("context flavor has invalid api (0x%x)",
+			    flavor->api);
+		ok = false;
+		break;
+	}
+
+	return ok;
+}
 
 void
 piglit_gl_test_config_init(struct piglit_gl_test_config *config)
