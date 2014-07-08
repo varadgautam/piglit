@@ -206,7 +206,7 @@ init_context(EGLDisplay dpy, EGLContext *out_ctx)
 		goto error;
 	}
 
-	piglit_dispatch_default_init(PIGLIT_DISPATCH_ES2);
+	piglit_dispatch_default_init(PIGLIT_GL_API_ES2);
 
 	/* From the EGL_KHR_fence_sync spec:
 	 *

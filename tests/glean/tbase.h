@@ -313,7 +313,7 @@ public:
 
 				// Make sure glew is initialized so we can call
 				// GL functions safely.
-				piglit_dispatch_default_init(PIGLIT_DISPATCH_GL);
+				piglit_dispatch_default_init(PIGLIT_GL_API_COMPAT);
 
 				// Check if test is applicable to this context
 				if (!isApplicable())

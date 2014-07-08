@@ -139,13 +139,7 @@ typedef piglit_dispatch_function_ptr (*piglit_get_ext_proc_address_function_ptr)
 
 typedef void (*piglit_error_function_ptr)(const char *);
 
-typedef enum {
-	PIGLIT_DISPATCH_GL,
-	PIGLIT_DISPATCH_ES1,
-	PIGLIT_DISPATCH_ES2
-} piglit_dispatch_api;
-
-void piglit_dispatch_init(piglit_dispatch_api api,
+void piglit_dispatch_init(enum piglit_gl_api api,
 			  piglit_get_core_proc_address_function_ptr get_core_proc,
 			  piglit_get_ext_proc_address_function_ptr get_ext_proc,
 			  piglit_error_function_ptr unsupported_proc,
@@ -156,7 +150,7 @@ piglit_dispatch_resolve_function(const char *name);
 
 #include "piglit-dispatch-gen.h"
 
-void piglit_dispatch_default_init(piglit_dispatch_api api);
+void piglit_dispatch_default_init(enum piglit_gl_api api);
 
 /* Prevent gl.h from being included, since it will attempt to define
  * the functions we've already defined.

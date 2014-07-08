@@ -73,7 +73,7 @@ main(int argc, char **argv)
 
 	ctx = piglit_get_glx_context(dpy, visinfo);
 	glXMakeCurrent(dpy, g, ctx);
-	piglit_dispatch_default_init(PIGLIT_DISPATCH_GL);
+	piglit_dispatch_default_init(PIGLIT_GL_API_COMPAT);
 
 	/* Clear to green */
 	glClearColor(0.0, 1.0, 0.0, 0.0);

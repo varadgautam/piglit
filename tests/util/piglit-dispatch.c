@@ -29,6 +29,12 @@
 #include "piglit-framework-gl.h"
 #endif
 
+typedef enum {
+	PIGLIT_DISPATCH_GL,
+	PIGLIT_DISPATCH_ES1,
+	PIGLIT_DISPATCH_ES2
+} piglit_dispatch_api;
+
 /* Global state maintained by the Piglit dispatch mechanism: */
 
 /**
@@ -203,13 +209,24 @@ check_extension(const char *name)
  * get_core_proc() or get_ext_proc().
  */
 void
-piglit_dispatch_init(piglit_dispatch_api api,
+piglit_dispatch_init(enum piglit_gl_api api,
 		     piglit_get_core_proc_address_function_ptr get_core_proc,
 		     piglit_get_ext_proc_address_function_ptr get_ext_proc,
 		     piglit_error_function_ptr unsupported_proc,
 		     piglit_error_function_ptr failure_proc)
 {
-	dispatch_api = api;
+	switch (api) {
+	case PIGLIT_GL_API_CORE:
+	case PIGLIT_GL_API_COMPAT:
+		dispatch_api = PIGLIT_DISPATCH_GL;
+		break;
+	case PIGLIT_GL_API_ES1:
+		dispatch_api = PIGLIT_DISPATCH_ES1;
+		break;
+	case PIGLIT_GL_API_ES2:
+		dispatch_api = PIGLIT_DISPATCH_ES2:
+		break;
+	}
 
 	get_core_proc_address = get_core_proc;
 	get_ext_proc_address = get_ext_proc;

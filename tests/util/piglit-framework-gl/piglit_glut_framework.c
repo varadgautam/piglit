@@ -148,7 +148,7 @@ init_glut(void)
 	glutKeyboardFunc(piglit_escape_exit_key);
 
 #ifdef PIGLIT_USE_OPENGL
-	piglit_dispatch_default_init(PIGLIT_DISPATCH_GL);
+	piglit_dispatch_default_init(flavor->api);
 #endif
 }
 

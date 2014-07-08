@@ -65,7 +65,7 @@ int main(int argc, char **argv)
 		piglit_report_result(PIGLIT_FAIL);
 	}
 
-	piglit_dispatch_default_init(PIGLIT_DISPATCH_GL);
+	piglit_dispatch_default_init(PIGLIT_GL_API_COMPAT);
 
 	version_string = (char *) glGetString(GL_VERSION);
 

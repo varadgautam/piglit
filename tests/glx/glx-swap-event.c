@@ -537,7 +537,7 @@ main(int argc, char *argv[])
             piglit_report_result(PIGLIT_FAIL);
         }
     }
-    piglit_dispatch_default_init(PIGLIT_DISPATCH_GL);
+    piglit_dispatch_default_init(PIGLIT_GL_API_COMPAT);
     event_loop(dpy, glxWin, win);
     
     glXDestroyContext(dpy, ctx);

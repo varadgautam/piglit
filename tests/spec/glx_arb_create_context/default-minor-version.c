@@ -57,7 +57,7 @@ int main(int argc, char **argv)
 	}
 
 	glXMakeContextCurrent(dpy, glxWin, glxWin, ctx);
-	piglit_dispatch_default_init(PIGLIT_DISPATCH_GL);
+	piglit_dispatch_default_init(PIGLIT_GL_API_COMPAT);
 
 	version_string = (char *) glGetString(GL_VERSION);
 

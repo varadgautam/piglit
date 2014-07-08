@@ -1806,7 +1806,7 @@ int piglit_use_fragment_program(void)
 		"END\n"
 		;
 
-	piglit_dispatch_default_init(PIGLIT_DISPATCH_GL);
+	piglit_dispatch_default_init(PIGLIT_GL_API_COMPAT);
 	if (!piglit_is_extension_supported("GL_ARB_fragment_program"))
 		return 0;
 
@@ -1826,7 +1826,7 @@ void piglit_require_fragment_program(void)
 
 int piglit_use_vertex_program(void)
 {
-	piglit_dispatch_default_init(PIGLIT_DISPATCH_GL);
+	piglit_dispatch_default_init(PIGLIT_GL_API_COMPAT);
 	return piglit_is_extension_supported("GL_ARB_vertex_program");
 }
 

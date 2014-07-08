@@ -193,7 +193,7 @@ get_core_proc_address(const char *function_name, int gl_10x_version)
  * on the first call.
  */
 void
-piglit_dispatch_default_init(piglit_dispatch_api api)
+piglit_dispatch_default_init(enum piglit_gl_api api)
 {
 	static bool already_initialized = false;
 

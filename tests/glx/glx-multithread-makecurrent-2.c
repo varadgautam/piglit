@@ -108,7 +108,7 @@ draw(Display *dpy)
 
 	ctx = piglit_get_glx_context(dpy, visinfo);
 	glXMakeCurrent(dpy, win, ctx);
-	piglit_dispatch_default_init(PIGLIT_DISPATCH_GL);
+	piglit_dispatch_default_init(PIGLIT_GL_API_COMPAT);
 
 	piglit_require_glx_extension(dpy, "GLX_MESA_multithread_makecurrent");
 

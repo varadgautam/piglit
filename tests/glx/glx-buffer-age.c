@@ -65,7 +65,7 @@ draw(Display *dpy)
 
 	ctx = piglit_get_glx_context(dpy, visinfo);
 	glXMakeCurrent(dpy, window, ctx);
-	piglit_dispatch_default_init(PIGLIT_DISPATCH_GL);
+	piglit_dispatch_default_init(PIGLIT_GL_API_COMPAT);
 
 	glXQueryDrawable(dpy, window, GLX_BACK_BUFFER_AGE_EXT, &age);
 	if (age != 0) {
