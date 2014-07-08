@@ -296,6 +296,15 @@ bool
 piglit_gl_ctx_flavor_is_valid(const struct piglit_gl_ctx_flavor *flavor);
 
 /**
+ * \brief Declare that the test config supports the given context flavor.
+ *
+ * The `attrib_mask` must be a bitmask of `enum piglit_gl_context_attrib`.
+ */
+void
+piglit_gl_support_context(struct piglit_gl_test_config *config,
+			  enum piglit_gl_api api, int version, int attrib_mask);
+
+/**
  * Initialize @a config with default values, some of which may come
  * from command line arguments.
  */

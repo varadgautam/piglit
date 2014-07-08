@@ -331,6 +331,14 @@ build_accepts_flavor(const struct piglit_gl_ctx_flavor *flavor)
 }
 
 void
+piglit_gl_support_context(struct piglit_gl_test_config *config,
+			  enum piglit_gl_api api, int version, int attrib_mask)
+{
+	append_flavor(&config->supported_ctx_flavors,
+		      api, version, attrib_mask);
+}
+
+void
 piglit_gl_test_run(int argc, char *argv[],
 		   const struct piglit_gl_test_config *config)
 {
