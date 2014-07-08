@@ -118,6 +118,12 @@ enum piglit_gl_visual {
  */
 struct piglit_gl_test_config {
 	/**
+	 * List of context flavors supported by the test. Type of list element
+	 * is `struct piglit_gl_ctx_flavor`.
+	 */
+	struct pgl_list supported_ctx_flavors;
+
+	/**
 	 * If this field is non-zero, then the test is able to run under any
 	 * OpenGL ES context whose version is backwards-compatible with the
 	 * given version.
