@@ -195,7 +195,7 @@ draw(Display *dpy)
 
 	ret = glXMakeCurrent(dpy, draw_win, my_ctx);
 	assert(ret);
-	piglit_dispatch_default_init(PIGLIT_DISPATCH_GL);
+	piglit_dispatch_default_init(PIGLIT_GL_API_COMPAT);
 
 	glEnable(GL_TEXTURE_2D);
 

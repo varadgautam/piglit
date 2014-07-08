@@ -298,16 +298,7 @@ setup_gl(const struct piglit_gl_ctx_flavor *flavor,
 	                                        test_config->window_width,
 	                                        test_config->window_height);
 	wfl_checked_make_current(display, *out_window, *out_context);
-
-#ifdef PIGLIT_USE_OPENGL
-	piglit_dispatch_default_init(PIGLIT_DISPATCH_GL);
-#elif defined(PIGLIT_USE_OPENGL_ES1)
-	piglit_dispatch_default_init(PIGLIT_DISPATCH_ES1);
-#elif defined(PIGLIT_USE_OPENGL_ES2) || defined(PIGLIT_USE_OPENGL_ES3)
-	piglit_dispatch_default_init(PIGLIT_DISPATCH_ES2);
-#else
-#	error
-#endif
+	piglit_dispatch_default_init(flavor->api);
 
 	actual_version = piglit_get_gl_version();
 	if (actual_version < flavor->version) {

@@ -233,15 +233,15 @@ egl_util_run(const struct egl_test *test, int argc, char *argv[])
 	/* choose dispatch_api and set ctx version to ctxAttribs if using ES */
 	switch (api_bit) {
 	case EGL_OPENGL_ES_BIT:
-		dispatch_api = PIGLIT_DISPATCH_ES1;
+		dispatch_api = PIGLIT_GL_API_COMPAT;
 		ctxAttribsES[1] = 1;
 		break;
 	case EGL_OPENGL_ES2_BIT:
-		dispatch_api = PIGLIT_DISPATCH_ES2;
+		dispatch_api = PIGLIT_GL_API_ES2;
 		ctxAttribsES[1] = 2;
 		break;
 	default:
-		dispatch_api = PIGLIT_DISPATCH_GL;
+		dispatch_api = PIGLIT_GL_API_ES1;
 	}
 
 

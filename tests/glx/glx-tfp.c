@@ -320,7 +320,7 @@ int main(int argc, char**argv)
 
 	glXMakeCurrent(dpy, win, ctx);
 
-	piglit_dispatch_default_init(PIGLIT_DISPATCH_GL);
+	piglit_dispatch_default_init(PIGLIT_GL_API_COMPAT);
 
 	if (piglit_automatic)
 		piglit_glx_set_no_input();
