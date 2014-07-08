@@ -211,6 +211,7 @@ void
 piglit_gl_test_config_init(struct piglit_gl_test_config *config)
 {
 	memset(config, 0, sizeof(*config));
+	pgl_list_init(&config->supported_ctx_flavors);
 }
 
 static void
