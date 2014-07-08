@@ -219,6 +219,15 @@ piglit_gl_test_config_init(struct piglit_gl_test_config *config)
 {
 	memset(config, 0, sizeof(*config));
 	pgl_list_init(&config->supported_ctx_flavors);
+
+	/* Set default window size.
+	 *
+	 * Note: Win8's min window width seems to be 160 pixels.  When the
+	 * window size is unexpectedly resized, tests are marked as "WARN".
+	 * Let's use a larger default to avoid that.
+	 */
+	config->window_width = 160;
+	config->window_height = 160;
 }
 
 static void
