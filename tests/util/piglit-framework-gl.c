@@ -173,12 +173,14 @@ append_flavor(struct pgl_list *list,
 }
 
 static void
-extract_flavors(struct pgl_list *list,
-		const struct piglit_gl_test_config *config)
+extract_flavors(struct piglit_gl_test_config *config)
 {
+	struct pgl_list *list = &config->supported_ctx_flavors;
 	int attribs = 0;
 
-	assert(pgl_list_is_empty(list));
+	if (!pgl_list_is_empty(list)) {
+		return;
+	}
 
 	if (config->require_debug_context) {
 		attribs |= PIGLIT_GL_CTX_DEBUG;
@@ -204,6 +206,11 @@ extract_flavors(struct pgl_list *list,
 	} else if (config->supports_gl_es_version > 0) {
 		append_flavor(list, PIGLIT_GL_API_ES1,
 			      config->supports_gl_es_version, attribs);
+	}
+
+	if (pgl_list_is_empty(list)) {
+		piglit_loge("test declares support for no context flavor");
+		piglit_report_result(PIGLIT_FAIL);
 	}
 }
 
@@ -342,21 +349,16 @@ void
 piglit_gl_test_run(int argc, char *argv[],
 		   const struct piglit_gl_test_config *config)
 {
-	struct pgl_list flavors;
+	struct piglit_gl_test_config final_config;
 	struct pgl_list_link *link;
 
 	piglit_width = config->window_width;
 	piglit_height = config->window_height;
 
-	pgl_list_init(&flavors);
-	extract_flavors(&flavors, config);
+	memcpy(&final_config, config, sizeof(final_config));
+	extract_flavors(&final_config);
 
-	if (pgl_list_is_empty(&flavors)) {
-		piglit_loge("test declares support for no context flavor");
-		piglit_report_result(PIGLIT_FAIL);
-	}
-
-	for (link = pgl_list_get_first(&flavors);
+	for (link = pgl_list_get_first(&final_config.supported_ctx_flavors);
 	     link != NULL;
 	     link = pgl_list_get_next(link)) {
 		/* FIXME: Don't opencode container_of(). */
