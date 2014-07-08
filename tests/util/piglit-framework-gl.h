@@ -272,6 +272,22 @@ piglit_gl_ctx_flavor_get_name(char name[], size_t size,
 			      const struct piglit_gl_ctx_flavor *flavor);
 
 /**
+ * \brief Does the context flavor represent a valid OpenGL context?
+ *
+ * Examples:
+ * 	- valid:   OpenGL Compatibility 2.1 Context
+ * 	- valid:   OpenGL Compatibility 3.1 Context
+ * 	- valid:   OpenGL Core 3.1 Debug Context
+ * 	- valid:   OpenGL Core 4.3 Forward-Compatible Debug Context
+ * 	- valid:   OpenGL ES 2.0 Context
+ * 	- valid:   OpenGL ES 3.1 Context
+ * 	- invalid: OpenGL 3.7 Core Context
+ * 	- invalid: OpenGL ES 1.1 Forward-Compatible Context
+ */
+bool
+piglit_gl_ctx_flavor_is_valid(const struct piglit_gl_ctx_flavor *flavor);
+
+/**
  * Initialize @a config with default values, some of which may come
  * from command line arguments.
  */
