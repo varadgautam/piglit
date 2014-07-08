@@ -147,9 +147,7 @@ init_glut(void)
 	glutReshapeFunc(default_reshape_func);
 	glutKeyboardFunc(piglit_escape_exit_key);
 
-#ifdef PIGLIT_USE_OPENGL
 	piglit_dispatch_default_init(flavor->api);
-#endif
 }
 
 static void
