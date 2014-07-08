@@ -19,7 +19,7 @@ set(UTIL_INCLUDES
 set(UTIL_SOURCES
 	piglit-list.c
 	piglit-log.c
-
+	piglit-shader.c
 	piglit-util.c
 	)
 
