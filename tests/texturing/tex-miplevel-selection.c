@@ -30,7 +30,7 @@
  * Also tests ARB_shader_texture_lod if requested.
  */
 
-#include "piglit-util-gl-common.h"
+#include "piglit-util-gl.h"
 
 PIGLIT_GL_TEST_CONFIG_BEGIN
 
