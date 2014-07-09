@@ -1,0 +1,3 @@
+#!/bin/bash
+
+hh make piglit piglitutil_gl{,es1,es2,es3} shader_runner shader_runner_gles2 shader_runner_gles3
