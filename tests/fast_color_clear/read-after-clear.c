@@ -50,8 +50,8 @@
 
 #include "piglit-util-gl.h"
 
-#define TEX_WIDTH 512
-#define TEX_HEIGHT 512
+#define TEX_WIDTH 4096
+#define TEX_HEIGHT 4096
 
 PIGLIT_GL_TEST_CONFIG_BEGIN
 	config.supports_gl_compat_version = 11;
@@ -81,7 +81,7 @@ static const char *vs_text =
 static const char *fs_text_paint_red =
 	"void main()\n"
 	"{\n"
-	"  gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
+	"  gl_FragColor = vec4(1.0/8.0, 1.0/4.0, 1.0/2.0, 1.0);\n"
 	"}\n";
 
 static const char *fs_text_sample =
